@@ -31,7 +31,7 @@
 
     <div class="header">
         <h1>LAPORAN ASET INVENTORI DAPUR</h1>
-        <p>Aplikasi Produksi Naila - Kondisi Riil Saat Ini</p>
+        <p>Aplikasi Produksi 876 ASIAW - Kondisi Riil Saat Ini</p>
         <p style="font-size: 11px;">Dicetak pada: {{ \Carbon\Carbon::now()->translatedFormat('d F Y H:i') }}</p>
     </div>
 
@@ -94,7 +94,7 @@
     </table>
 
     <div class="footer">
-        Dokumen ini dihasilkan secara otomatis oleh Sistem Aplikasi Produksi Naila. Data yang ditampilkan adalah rekapitulasi riil dari transaksi Inventori.
+        Dokumen ini dihasilkan secara otomatis oleh Sistem Aplikasi Produksi 876 ASIAW. Data yang ditampilkan adalah rekapitulasi riil dari transaksi Inventori.
     </div>
 
 </body>

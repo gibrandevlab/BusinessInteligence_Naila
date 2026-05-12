@@ -54,7 +54,11 @@
                         </a>
                         <button @click="openProduction( {{ $menu->id }}, '{{ $menu->name }}', {{ $capacity }} )" {{ $capacity == 0 ? 'disabled' : '' }} class="flex-1 {{ $capacity > 0 ? 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-sm' : 'bg-gray-200 text-gray-400 cursor-not-allowed' }} py-2 rounded-lg text-[10px] font-bold flex items-center justify-center transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
-                            Tambah Produksi
+                            Tambah
+                        </button>
+                        <button @click="openOpname( {{ $menu->id }}, '{{ $menu->name }}', {{ $menu->current_stock }} )" class="flex-1 bg-amber-50 hover:bg-amber-100 text-amber-700 py-2 rounded-lg text-[10px] font-bold flex items-center justify-center transition-colors border border-amber-100">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3 mr-1"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" /></svg>
+                            Koreksi (Cacat)
                         </button>
                     </div>
                 </div>
@@ -96,13 +100,55 @@
 
     </div>
 
+        <!-- MODAL KOREKSI (OPNAME) -->
+        <div x-show="showOpname" class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" x-transition.opacity style="display: none;">
+            <div class="bg-white w-full max-w-sm rounded-3xl p-5 shadow-2xl relative" @click.away="showOpname = false">
+                <button @click="showOpname = false" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                
+                <h3 class="text-lg font-extrabold text-gray-900 mb-1">Koreksi Produk Jadi</h3>
+                <p class="text-xs text-amber-600 font-semibold mb-4" x-text="selectedMenuName"></p>
+
+                <form action="{{ route('inventory.production.opname') }}" method="POST">
+                    @csrf
+                    <input type="hidden" name="menu_id" x-model="selectedMenuId">
+                    
+                    <div class="bg-amber-50 rounded-xl p-3 mb-4 border border-amber-100">
+                        <p class="text-[10px] text-amber-700 font-semibold mb-1">Stok Matang di Sistem Saat Ini:</p>
+                        <p class="text-xl font-extrabold text-amber-900"><span x-text="currentStock"></span> <span class="text-xs font-bold uppercase">Porsi</span></p>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Stok Realita Etalase (Porsi)</label>
+                            <input type="number" step="1" name="actual_stock" required class="w-full text-sm border-gray-200 bg-gray-50 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 font-bold p-2.5 text-red-600" placeholder="Masukkan sisa porsi yang bagus">
+                            <p class="text-[10px] text-gray-400 mt-1 leading-tight">Jika ada yang basi/cacat, sistem akan mendeteksi selisihnya sebagai pengeluaran kerugian.</p>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-1">Alasan / Keterangan</label>
+                            <input type="text" name="reason" required class="w-full text-sm border-gray-200 bg-gray-50 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 font-medium p-2.5" placeholder="Contoh: Basi, Jatuh, Gosong, dll">
+                        </div>
+                        
+                        <div class="pt-2">
+                            <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl shadow-lg shadow-amber-200 active:scale-95 transition-transform">Koreksi & Hitung Kerugian</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('productionManager', () => ({
                 showProduction: false,
+                showOpname: false,
                 selectedMenuId: null,
                 selectedMenuName: '',
                 maxCapacity: 0,
+                currentStock: 0,
 
                 openProduction(id, name, capacity) {
                     if(capacity <= 0) return;
@@ -110,6 +156,15 @@
                     this.selectedMenuName = name;
                     this.maxCapacity = capacity;
                     this.showProduction = true;
+                    this.showOpname = false;
+                },
+
+                openOpname(id, name, stock) {
+                    this.selectedMenuId = id;
+                    this.selectedMenuName = name;
+                    this.currentStock = stock;
+                    this.showOpname = true;
+                    this.showProduction = false;
                 }
             }));
         });

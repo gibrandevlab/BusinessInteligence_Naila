@@ -38,111 +38,304 @@ class DatabaseSeeder extends Seeder
         ]);
 
         // 2. Buat Supplier
-        $sup1 = Supplier::create(['name' => 'Pasar Induk', 'kategori_bahan' => 'Sayuran & Bumbu']);
+        $sup1 = Supplier::create(['name' => 'Pasar Induk', 'kategori_bahan' => 'Sayuran & Tahu']);
         $sup2 = Supplier::create(['name' => 'Toko Daging Barokah', 'kategori_bahan' => 'Daging']);
         $sup3 = Supplier::create(['name' => 'Grosir Sembako', 'kategori_bahan' => 'Sembako']);
 
         // 3. Buat Bahan Baku
-        $ingBeras = Ingredient::create(['name' => 'Beras Putih', 'unit' => 'kg', 'current_stock' => 50, 'min_stock' => 10, 'cost_per_unit' => 14000, 'supplier_id' => $sup3->id]);
-        $ingAyam = Ingredient::create(['name' => 'Daging Ayam', 'unit' => 'kg', 'current_stock' => 20, 'min_stock' => 5, 'cost_per_unit' => 35000, 'supplier_id' => $sup2->id]);
-        $ingBawang = Ingredient::create(['name' => 'Bawang Merah', 'unit' => 'gram', 'current_stock' => 5000, 'min_stock' => 1000, 'cost_per_unit' => 40, 'supplier_id' => $sup1->id]);
-        $ingKecap = Ingredient::create(['name' => 'Kecap Manis', 'unit' => 'ml', 'current_stock' => 5000, 'min_stock' => 1000, 'cost_per_unit' => 20, 'supplier_id' => $sup3->id]);
-        $ingTelur = Ingredient::create(['name' => 'Telur Ayam', 'unit' => 'butir', 'current_stock' => 150, 'min_stock' => 30, 'cost_per_unit' => 2000, 'supplier_id' => $sup3->id]);
-        $ingMie = Ingredient::create(['name' => 'Mie Telur', 'unit' => 'bungkus', 'current_stock' => 100, 'min_stock' => 20, 'cost_per_unit' => 5000, 'supplier_id' => $sup3->id]);
-        $ingSayur = Ingredient::create(['name' => 'Sawi Hijau', 'unit' => 'gram', 'current_stock' => 3000, 'min_stock' => 500, 'cost_per_unit' => 10, 'supplier_id' => $sup1->id]);
+        $ingTahu = Ingredient::create([
+            'name' => 'Tahu Kulit',
+            'unit' => 'pcs',
+            'current_stock' => 1000,
+            'min_stock' => 100,
+            'cost_per_unit' => 500,
+            'supplier_id' => $sup1->id
+        ]);
+        $ingAyam = Ingredient::create([
+            'name' => 'Daging Ayam Fillet',
+            'unit' => 'kg',
+            'current_stock' => 20,
+            'min_stock' => 5,
+            'cost_per_unit' => 35000,
+            'supplier_id' => $sup2->id
+        ]);
+        $ingTapioka = Ingredient::create([
+            'name' => 'Tepung Tapioka',
+            'unit' => 'kg',
+            'current_stock' => 10,
+            'min_stock' => 2,
+            'cost_per_unit' => 12000,
+            'supplier_id' => $sup3->id
+        ]);
+        $ingPanir = Ingredient::create([
+            'name' => 'Tepung Panir',
+            'unit' => 'kg',
+            'current_stock' => 10,
+            'min_stock' => 2,
+            'cost_per_unit' => 15000,
+            'supplier_id' => $sup3->id
+        ]);
+        $ingTerigu = Ingredient::create([
+            'name' => 'Tepung Terigu',
+            'unit' => 'kg',
+            'current_stock' => 15,
+            'min_stock' => 5,
+            'cost_per_unit' => 11000,
+            'supplier_id' => $sup3->id
+        ]);
+        $ingWortel = Ingredient::create([
+            'name' => 'Wortel',
+            'unit' => 'kg',
+            'current_stock' => 5,
+            'min_stock' => 1,
+            'cost_per_unit' => 14000,
+            'supplier_id' => $sup1->id
+        ]);
+        $ingKentang = Ingredient::create([
+            'name' => 'Kentang',
+            'unit' => 'kg',
+            'current_stock' => 5,
+            'min_stock' => 1,
+            'cost_per_unit' => 16000,
+            'supplier_id' => $sup1->id
+        ]);
+        $ingMinyak = Ingredient::create([
+            'name' => 'Minyak Goreng',
+            'unit' => 'liter',
+            'current_stock' => 20,
+            'min_stock' => 5,
+            'cost_per_unit' => 16000,
+            'supplier_id' => $sup3->id
+        ]);
 
-        // 4. Buat Histori Harga Bahan (Biar ngga kosong)
-        IngredientPrice::create(['ingredient_id' => $ingBeras->id, 'supplier_id' => $sup3->id, 'price_per_unit' => 14000, 'quantity' => 50, 'purchased_at' => Carbon::now()->subDays(5)]);
-        IngredientPrice::create(['ingredient_id' => $ingAyam->id, 'supplier_id' => $sup2->id, 'price_per_unit' => 35000, 'quantity' => 20, 'purchased_at' => Carbon::now()->subDays(2)]);
+        // 4. Histori Harga Bahan (data awal)
+        IngredientPrice::create([
+            'ingredient_id' => $ingTahu->id,
+            'supplier_id' => $sup1->id,
+            'price_per_unit' => 500,
+            'quantity' => 1000,
+            'purchased_at' => Carbon::now()->subDays(5)
+        ]);
+        IngredientPrice::create([
+            'ingredient_id' => $ingAyam->id,
+            'supplier_id' => $sup2->id,
+            'price_per_unit' => 35000,
+            'quantity' => 20,
+            'purchased_at' => Carbon::now()->subDays(2)
+        ]);
 
-        // 5. Buat Resep (Kita asumsikan 5 Menu)
-        // Menu 1: Nasi Goreng Ayam
-        $recNasgor = Recipe::create(['name' => 'Nasi Goreng Ayam', 'serving_qty' => 1, 'packaging_cost' => 1500, 'overhead_cost' => 2000]);
-        RecipeItem::create(['recipe_id' => $recNasgor->id, 'ingredient_id' => $ingBeras->id, 'quantity' => 0.2]); // 200g beras
-        RecipeItem::create(['recipe_id' => $recNasgor->id, 'ingredient_id' => $ingAyam->id, 'quantity' => 0.05]); // 50g ayam
-        RecipeItem::create(['recipe_id' => $recNasgor->id, 'ingredient_id' => $ingTelur->id, 'quantity' => 1]);   // 1 butir telur
-        RecipeItem::create(['recipe_id' => $recNasgor->id, 'ingredient_id' => $ingKecap->id, 'quantity' => 15]);  // 15ml kecap
-        RecipeItem::create(['recipe_id' => $recNasgor->id, 'ingredient_id' => $ingBawang->id, 'quantity' => 10]); // 10g bawang
+        // 5. Buat Resep
+        $recTabso = Recipe::create([
+            'name' => 'Tabso Crispy',
+            'serving_qty' => 1,
+            'packaging_cost' => 500,
+            'overhead_cost' => 300
+        ]);
+        RecipeItem::create(['recipe_id' => $recTabso->id, 'ingredient_id' => $ingTahu->id, 'quantity' => 1]);       // 1 pcs tahu
+        RecipeItem::create(['recipe_id' => $recTabso->id, 'ingredient_id' => $ingAyam->id, 'quantity' => 0.03]);    // 30g ayam
+        RecipeItem::create(['recipe_id' => $recTabso->id, 'ingredient_id' => $ingTapioka->id, 'quantity' => 0.01]); // 10g tapioka
+        RecipeItem::create(['recipe_id' => $recTabso->id, 'ingredient_id' => $ingPanir->id, 'quantity' => 0.015]);  // 15g panir
+        RecipeItem::create(['recipe_id' => $recTabso->id, 'ingredient_id' => $ingMinyak->id, 'quantity' => 0.02]);  // 20ml minyak
 
-        // Menu 2: Mie Goreng Ayam
-        $recMie = Recipe::create(['name' => 'Mie Goreng Ayam', 'serving_qty' => 1, 'packaging_cost' => 1500, 'overhead_cost' => 2000]);
-        RecipeItem::create(['recipe_id' => $recMie->id, 'ingredient_id' => $ingMie->id, 'quantity' => 1]);       // 1 bungkus mie
-        RecipeItem::create(['recipe_id' => $recMie->id, 'ingredient_id' => $ingAyam->id, 'quantity' => 0.05]);    // 50g ayam
-        RecipeItem::create(['recipe_id' => $recMie->id, 'ingredient_id' => $ingTelur->id, 'quantity' => 1]);      // 1 butir telur
-        RecipeItem::create(['recipe_id' => $recMie->id, 'ingredient_id' => $ingSayur->id, 'quantity' => 50]);     // 50g sayur
-        RecipeItem::create(['recipe_id' => $recMie->id, 'ingredient_id' => $ingKecap->id, 'quantity' => 15]);     // 15ml kecap
+        $recPastel = Recipe::create([
+            'name' => 'Pastel',
+            'serving_qty' => 1,
+            'packaging_cost' => 300,
+            'overhead_cost' => 200
+        ]);
+        RecipeItem::create(['recipe_id' => $recPastel->id, 'ingredient_id' => $ingTerigu->id, 'quantity' => 0.03]);  // 30g terigu
+        RecipeItem::create(['recipe_id' => $recPastel->id, 'ingredient_id' => $ingKentang->id, 'quantity' => 0.02]); // 20g kentang
+        RecipeItem::create(['recipe_id' => $recPastel->id, 'ingredient_id' => $ingWortel->id, 'quantity' => 0.01]);  // 10g wortel
+        RecipeItem::create(['recipe_id' => $recPastel->id, 'ingredient_id' => $ingMinyak->id, 'quantity' => 0.02]);  // 20ml minyak
 
-        // Menu 3: Nasi Ayam Geprek
-        $recGeprek = Recipe::create(['name' => 'Nasi Ayam Geprek', 'serving_qty' => 1, 'packaging_cost' => 1500, 'overhead_cost' => 2500]);
-        RecipeItem::create(['recipe_id' => $recGeprek->id, 'ingredient_id' => $ingBeras->id, 'quantity' => 0.2]); // 200g beras
-        RecipeItem::create(['recipe_id' => $recGeprek->id, 'ingredient_id' => $ingAyam->id, 'quantity' => 0.1]);  // 100g ayam
-
-        // Menu 4: Telur Dadar Spesial
-        $recTelur = Recipe::create(['name' => 'Telur Dadar Spesial', 'serving_qty' => 1, 'packaging_cost' => 1000, 'overhead_cost' => 1000]);
-        RecipeItem::create(['recipe_id' => $recTelur->id, 'ingredient_id' => $ingTelur->id, 'quantity' => 2]);     // 2 butir telur
-        RecipeItem::create(['recipe_id' => $recTelur->id, 'ingredient_id' => $ingBawang->id, 'quantity' => 20]);   // 20g bawang
-
-        // Menu 5: Ayam Bakar Madu (Kita pakai bumbu kecap)
-        $recAyamBakar = Recipe::create(['name' => 'Ayam Bakar Manis', 'serving_qty' => 1, 'packaging_cost' => 1500, 'overhead_cost' => 2500]);
-        RecipeItem::create(['recipe_id' => $recAyamBakar->id, 'ingredient_id' => $ingAyam->id, 'quantity' => 0.15]); // 150g ayam
-        RecipeItem::create(['recipe_id' => $recAyamBakar->id, 'ingredient_id' => $ingKecap->id, 'quantity' => 30]);  // 30ml kecap
+        $recTahuGoreng = Recipe::create([
+            'name' => 'Tahu Goreng',
+            'serving_qty' => 1,
+            'packaging_cost' => 200,
+            'overhead_cost' => 100
+        ]);
+        RecipeItem::create(['recipe_id' => $recTahuGoreng->id, 'ingredient_id' => $ingTahu->id, 'quantity' => 1]);    // 1 pcs tahu
+        RecipeItem::create(['recipe_id' => $recTahuGoreng->id, 'ingredient_id' => $ingMinyak->id, 'quantity' => 0.02]); // 20ml minyak
 
         // 6. Buat Menu Item
-        $menu1 = MenuItem::create(['recipe_id' => $recNasgor->id, 'name' => 'Nasi Goreng Ayam', 'category' => 'Makanan', 'price_eceran' => 20000, 'price_reseller' => 18000, 'price_agen' => 16000]);
-        $menu2 = MenuItem::create(['recipe_id' => $recMie->id, 'name' => 'Mie Goreng Ayam', 'category' => 'Makanan', 'price_eceran' => 18000, 'price_reseller' => 16000, 'price_agen' => 14000]);
-        $menu3 = MenuItem::create(['recipe_id' => $recGeprek->id, 'name' => 'Nasi Ayam Geprek', 'category' => 'Makanan', 'price_eceran' => 22000, 'price_reseller' => 20000, 'price_agen' => 18000]);
-        $menu4 = MenuItem::create(['recipe_id' => $recTelur->id, 'name' => 'Telur Dadar Spesial', 'category' => 'Lauk', 'price_eceran' => 10000, 'price_reseller' => 9000, 'price_agen' => 8000]);
-        $menu5 = MenuItem::create(['recipe_id' => $recAyamBakar->id, 'name' => 'Ayam Bakar Manis', 'category' => 'Lauk', 'price_eceran' => 25000, 'price_reseller' => 22000, 'price_agen' => 20000]);
+        $menu1 = MenuItem::create([
+            'recipe_id' => $recTabso->id,
+            'name' => 'Tabso Crispy',
+            'category' => 'Makanan Utama',
+            'price_eceran' => 3500,
+            'price_reseller' => 3000,
+            'price_agen' => 2800
+        ]);
+        $menu2 = MenuItem::create([
+            'recipe_id' => $recPastel->id,
+            'name' => 'Pastel',
+            'category' => 'Cemilan',
+            'price_eceran' => 2500,
+            'price_reseller' => 2200,
+            'price_agen' => 2000
+        ]);
+        $menu3 = MenuItem::create([
+            'recipe_id' => $recTahuGoreng->id,
+            'name' => 'Tahu Goreng',
+            'category' => 'Cemilan',
+            'price_eceran' => 2000,
+            'price_reseller' => 1800,
+            'price_agen' => 1500
+        ]);
 
         // Hitung HPP awal
-        foreach ([$menu1, $menu2, $menu3, $menu4, $menu5] as $menu) {
+        foreach ([$menu1, $menu2, $menu3] as $menu) {
             $menu->syncHpp();
         }
 
-        // 7. Dummy Penjualan Harian (3 Hari Terakhir)
-        for ($i = 2; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
+        // Persiapan data resep dan menu untuk simulasi
+        $menus = [
+            ['menu' => $menu1, 'recipe' => $recTabso],
+            ['menu' => $menu2, 'recipe' => $recPastel],
+            ['menu' => $menu3, 'recipe' => $recTahuGoreng],
+        ];
+        // Muat semua recipe items dalam struktur yang mudah diakses
+        $recipeItems = [];
+        foreach (RecipeItem::all() as $ri) {
+            $recipeItems[$ri->recipe_id][] = $ri;
+        }
+
+        // Inisialisasi stok runtime (mencerminkan stok awal dari DB)
+        $stocks = [
+            $ingTahu->id => $ingTahu->current_stock,
+            $ingAyam->id => $ingAyam->current_stock,
+            $ingTapioka->id => $ingTapioka->current_stock,
+            $ingPanir->id => $ingPanir->current_stock,
+            $ingTerigu->id => $ingTerigu->current_stock,
+            $ingWortel->id => $ingWortel->current_stock,
+            $ingKentang->id => $ingKentang->current_stock,
+            $ingMinyak->id => $ingMinyak->current_stock,
+        ];
+
+        // Supplier & bahan grouping (untuk simulasi pembelian harian)
+        $supplierIngredients = [
+            $sup1->id => [$ingTahu, $ingWortel, $ingKentang],
+            $sup2->id => [$ingAyam],
+            $sup3->id => [$ingTapioka, $ingPanir, $ingTerigu, $ingMinyak],
+        ];
+
+        // Rentang pembelian harian per kategori (agar stok tetap terjaga)
+        $purchaseRanges = [
+            $sup1->id => ['Tahu Kulit' => [200, 600], 'Wortel' => [2, 10], 'Kentang' => [2, 10]],
+            $sup2->id => ['Daging Ayam Fillet' => [5, 20]],
+            $sup3->id => [
+                'Tepung Tapioka' => [3, 10],
+                'Tepung Panir' => [3, 8],
+                'Tepung Terigu' => [3, 12],
+                'Minyak Goreng' => [5, 15],
+            ],
+        ];
+
+        // 7. Simulasi 90 hari (3 bulan terakhir) transaksi rame setiap hari
+        $startDate = Carbon::now()->subDays(90)->startOfDay();
+        $endDate = Carbon::now()->startOfDay(); // hari ini
+
+        $buyerTypes = ['Eceran', 'Reseller', 'Agen'];
+
+        for ($date = $startDate->copy(); $date->lt($endDate); $date->addDay()) {
+            $currentDate = $date->format('Y-m-d');
+
+            // ---------- PEMBELIAN BAHAN BAKU HARIAN ----------
+            // Pilih supplier bergilir (dua supplier per hari agar stok beragam)
+            $supplierIds = array_keys($supplierIngredients);
+            $selectedSuppliers = [$supplierIds[$date->dayOfYear % count($supplierIds)]]; // satu supplier per hari
+            // Kadang tambah supplier kedua agar lebih ramai
+            if ($date->day % 3 == 0) {
+                $second = $supplierIds[($date->dayOfYear + 1) % count($supplierIds)];
+                if (!in_array($second, $selectedSuppliers)) {
+                    $selectedSuppliers[] = $second;
+                }
+            }
+
+            foreach ($selectedSuppliers as $supplierId) {
+                $purchase = Purchase::create([
+                    'user_id' => $admin->id,
+                    'supplier_id' => $supplierId,
+                    'purchase_date' => $currentDate,
+                    'payment_method' => 'Tunai',
+                    'notes' => 'Restok harian'
+                ]);
+
+                $purchaseTotal = 0;
+                foreach ($supplierIngredients[$supplierId] as $ingredient) {
+                    $range = $purchaseRanges[$supplierId][$ingredient->name] ?? [10, 50];
+                    $qty = rand($range[0], $range[1]);
+
+                    // Catat item pembelian
+                    PurchaseItem::create([
+                        'purchase_id' => $purchase->id,
+                        'ingredient_id' => $ingredient->id,
+                        'quantity' => $qty,
+                        'price_per_unit' => $ingredient->cost_per_unit,
+                        'subtotal' => $qty * $ingredient->cost_per_unit
+                    ]);
+
+                    // Tambah ke stok runtime
+                    $stocks[$ingredient->id] += $qty;
+                }
+
+                $purchase->recalculateTotal();
+            }
+
+            // ---------- PENJUALAN HARIAN (produksi = penjualan) ----------
             $sale = DailySale::create([
                 'user_id' => $kasir->id,
-                'sale_date' => $date->format('Y-m-d')
+                'sale_date' => $currentDate
             ]);
 
-            // Random qty sold & buyer type
-            $buyerTypes = ['Eceran', 'Reseller', 'Agen'];
-            DailySaleItem::makeFromQty($sale, $menu1, rand(10, 30), $buyerTypes[array_rand($buyerTypes)])->save();
-            DailySaleItem::makeFromQty($sale, $menu2, rand(5, 20), $buyerTypes[array_rand($buyerTypes)])->save();
-            DailySaleItem::makeFromQty($sale, $menu3, rand(15, 40), $buyerTypes[array_rand($buyerTypes)])->save();
-            DailySaleItem::makeFromQty($sale, $menu4, rand(5, 10), $buyerTypes[array_rand($buyerTypes)])->save();
-            DailySaleItem::makeFromQty($sale, $menu5, rand(8, 25), $buyerTypes[array_rand($buyerTypes)])->save();
+            foreach ($menus as $menuData) {
+                $menu = $menuData['menu'];
+                $recipeId = $menu->recipe_id;
+                $items = $recipeItems[$recipeId] ?? [];
+
+                // Hitung maksimum produksi berdasarkan stok yang tersedia
+                $maxServings = PHP_INT_MAX;
+                foreach ($items as $ri) {
+                    if ($ri->quantity > 0) {
+                        $possible = floor($stocks[$ri->ingredient_id] / $ri->quantity);
+                        if ($possible < $maxServings) {
+                            $maxServings = $possible;
+                        }
+                    }
+                }
+
+                // Tentukan jumlah terjual (produksi) tidak melebihi kapasitas
+                $soldQty = 0;
+                if ($maxServings > 0) {
+                    // Jual antara 60% sampai 100% kapasitas, agar transaksi tetap ramai
+                    $minSell = max(1, (int) ($maxServings * 0.6));
+                    $maxSell = $maxServings;
+                    $soldQty = rand($minSell, $maxSell);
+
+                    // Kurangi stok bahan baku sesuai resep
+                    foreach ($items as $ri) {
+                        $stocks[$ri->ingredient_id] -= $ri->quantity * $soldQty;
+                    }
+                }
+                // Jika kapasitas = 0, maka tidak ada penjualan untuk menu ini hari itu
+
+                if ($soldQty > 0) {
+                    // Tentukan tipe pembeli secara acak
+                    $buyerType = $buyerTypes[array_rand($buyerTypes)];
+
+                    DailySaleItem::makeFromQty($sale, $menu, $soldQty, $buyerType)->save();
+                }
+            }
 
             $sale->recalculateTotals();
 
-            // 8. Dummy Pembelian Bahan Baku (Purchase)
-            $purchase = Purchase::create([
-                'user_id' => $admin->id,
-                'supplier_id' => $sup1->id,
-                'purchase_date' => $date->format('Y-m-d'),
-                'payment_method' => 'Tunai',
-                'notes' => 'Belanja rutin harian'
-            ]);
-
-            PurchaseItem::create([
-                'purchase_id' => $purchase->id,
-                'ingredient_id' => $ingBawang->id,
-                'quantity' => 1000,
-                'price_per_unit' => 40,
-                'subtotal' => 40000
-            ]);
-
-            $purchase->recalculateTotal();
-
-            // 9. Dummy Pengeluaran Operasional (Expense)
+            // ---------- BIAYA OPERASIONAL HARIAN ----------
             Expense::create([
                 'user_id' => $admin->id,
                 'category' => 'Biaya Produksi',
-                'description' => 'Biaya gas dan tenaga masak harian',
-                'amount' => 50000,
-                'expense_date' => $date->format('Y-m-d')
+                'description' => 'Gas, listrik, tenaga masak harian',
+                'amount' => rand(25000, 50000),
+                'expense_date' => $currentDate
             ]);
         }
     }

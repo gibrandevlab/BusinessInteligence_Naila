@@ -88,7 +88,81 @@
 
         </div>
 
-        <!-- Tombol Input Pengeluaran Lainnya -->
+        {{-- Laporan Interaktif (BI) --}}
+        <div class="mt-4 space-y-3">
+            <h3 class="text-xs font-bold text-gray-400 uppercase tracking-wider ml-1">Laporan Interaktif (BI)</h3>
+            
+            <a href="{{ route('reports.sales_trend') }}" class="flex items-center justify-between bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow active:scale-[0.98]">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-blue-50 p-2.5 rounded-xl text-xl">📈</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Tren Penjualan (Revenue)</h3>
+                        <p class="text-[10px] text-gray-500">Lihat pergerakan omset dari hari ke hari secara visual.</p>
+                    </div>
+                </div>
+                <div class="text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+            </a>
+
+            <a href="{{ route('reports.menu_ranking') }}" class="flex items-center justify-between bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow active:scale-[0.98]">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-yellow-50 p-2.5 rounded-xl text-xl">🏆</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Ranking Menu Terlaris</h3>
+                        <p class="text-[10px] text-gray-500">Peringkat 10 besar menu beserta sumbangan profitnya.</p>
+                    </div>
+                </div>
+                <div class="text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+            </a>
+
+            <a href="{{ route('reports.waste_analysis') }}" class="flex items-center justify-between bg-white rounded-2xl p-4 shadow-sm border border-gray-100 hover:shadow-md transition-shadow active:scale-[0.98]">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-red-50 p-2.5 rounded-xl text-xl">🗑️</div>
+                    <div>
+                        <h3 class="text-sm font-bold text-gray-900">Analisis Kebocoran / Waste</h3>
+                        <p class="text-[10px] text-gray-500">Membandingkan total diproduksi vs yang berhasil terjual.</p>
+                    </div>
+                </div>
+                <div class="text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" /></svg>
+                </div>
+            </a>
+        </div>
+
+        {{-- Fitur AI --}}
+        <div class="mt-4 grid grid-cols-2 gap-3">
+            <!-- Tombol Klasifikasi -->
+            <a href="{{ route('analysis.klasifikasi') }}" class="block bg-gradient-to-br from-purple-50 to-indigo-50 rounded-2xl p-4 shadow-sm border border-purple-200 hover:shadow-md transition-shadow active:scale-[0.98]">
+                <div class="bg-purple-100 w-10 h-10 rounded-xl flex items-center justify-center mb-3">
+                    <span class="text-xl">🚨</span>
+                </div>
+                <div class="flex items-center space-x-1 mb-1">
+                    <h3 class="text-sm font-bold text-gray-900 leading-tight">AI Peringatan Dini</h3>
+                </div>
+                <p class="text-[9px] text-gray-600 leading-relaxed">Prediksi apakah menu Bintang Anda berisiko jatuh bulan depan.</p>
+            </a>
+
+            <!-- Tombol Prediksi -->
+            <a href="{{ route('analysis.prediksi') }}" class="block bg-gradient-to-br from-sky-50 to-cyan-50 rounded-2xl p-4 shadow-sm border border-sky-200 hover:shadow-md transition-shadow active:scale-[0.98]">
+                <div class="bg-sky-100 w-10 h-10 rounded-xl flex items-center justify-center mb-3">
+                    <span class="text-xl">📈</span>
+                </div>
+                <div class="flex items-center space-x-1 mb-1">
+                    <h3 class="text-sm font-bold text-gray-900 leading-tight">AI Prediksi Permintaan</h3>
+                </div>
+                <p class="text-[9px] text-gray-600 leading-relaxed">Tebak berapa porsi yang akan laku di hari-hari berikutnya.</p>
+            </a>
+        </div>
+        
+        <div class="mt-2 bg-amber-50 rounded-xl p-2.5 border border-amber-200 flex items-start space-x-2">
+            <span class="text-amber-600 text-sm">💡</span>
+            <p class="text-[9px] text-amber-700 font-semibold leading-relaxed pt-0.5">Semakin sering aplikasi kasir digunakan, tebakan AI akan semakin akurat. Saat ini fitur AI masih mempelajari pola penjualan Anda.</p>
+        </div>
+
+        {{-- Tombol Input Pengeluaran Lainnya --}}
         <div x-data="{ showExpenseModal: false }" class="mt-6">
             <button @click="showExpenseModal = true" class="w-full bg-red-50 hover:bg-red-100 border border-red-200 text-red-700 font-bold py-4 px-6 rounded-2xl shadow-sm flex justify-center items-center active:scale-95 transition-all">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5 mr-2">

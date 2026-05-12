@@ -36,7 +36,7 @@
 
     <div class="header">
         <h1>LAPORAN KEUANGAN & LABA RUGI</h1>
-        <p>Aplikasi Produksi Naila - Periode: {{ $periodLabel }}</p>
+        <p>Aplikasi Produksi 876 ASIAW - Periode: {{ $periodLabel }}</p>
         <p style="font-size: 11px;">Dicetak pada: {{ \Carbon\Carbon::now()->translatedFormat('d F Y H:i') }}</p>
     </div>
 
@@ -94,7 +94,7 @@
     </div>
 
     <div class="footer">
-        Dokumen ini dihasilkan secara otomatis oleh Sistem Aplikasi Produksi Naila. Data yang ditampilkan adalah rekapitulasi riil dari transaksi POS dan Inventori.
+        Dokumen ini dihasilkan secara otomatis oleh Sistem Aplikasi Produksi 876 ASIAW. Data yang ditampilkan adalah rekapitulasi riil dari transaksi POS dan Inventori.
     </div>
 
 </body>

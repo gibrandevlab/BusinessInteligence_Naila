@@ -23,7 +23,14 @@
                 <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden relative">
                     <div class="bg-indigo-50 px-4 py-3 border-b border-indigo-100 flex justify-between items-center">
                         <h3 class="font-bold text-indigo-900 text-sm">{{ $recipe->name }}</h3>
-                        <span class="text-[10px] font-bold text-white bg-indigo-500 px-2.5 py-1 rounded-md shadow-sm">1 Porsi</span>
+                        <div class="flex items-center space-x-2">
+                            <a href="{{ route('recipe.edit', $recipe) }}" class="text-[10px] font-bold text-white bg-amber-500 hover:bg-amber-600 px-2.5 py-1.5 rounded-md shadow-sm transition-colors">Edit</a>
+                            <form action="{{ route('recipe.destroy', $recipe) }}" method="POST" onsubmit="return confirm('Yakin ingin menghapus resep ini? Data menu pada kasir juga akan terhapus.')" class="m-0 p-0">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-[10px] font-bold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1.5 rounded-md shadow-sm transition-colors">Hapus</button>
+                            </form>
+                        </div>
                     </div>
                     <div class="p-4">
                         <ul class="space-y-2.5 mb-4">

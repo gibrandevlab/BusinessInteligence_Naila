@@ -1,5 +1,5 @@
 # 📋 Analisis & Rencana Implementasi
-## Web ERP F&B — "Aplikasi Produksi Naila"
+## Web ERP F&B — "Aplikasi Produksi 876 ASIAW"
 > **Stack:** Laravel 12 · Tailwind CSS v4 · Livewire/Blade · SQLite/MySQL  
 > **Metode SPK:** Menu Engineering (Kasavana & Smith) + Matriks BCG
 

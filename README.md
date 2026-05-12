@@ -1,6 +1,6 @@
-# 🍽️ Naila F&B ERP System
+# 🍽️ 876 ASIAW F&B ERP System
 
-Naila ERP adalah sistem Perencanaan Sumber Daya Perusahaan (Enterprise Resource Planning) berbasis web yang dirancang khusus untuk bisnis *Food & Beverage* (F&B) skala menengah. Sistem ini menjembatani operasional dapur (Inventory & Produksi), penjualan (Kasir/POS), hingga pembukuan otomatis (Laporan Keuangan & SPK).
+876 ASIAW ERP adalah sistem Perencanaan Sumber Daya Perusahaan (Enterprise Resource Planning) berbasis web yang dirancang khusus untuk bisnis *Food & Beverage* (F&B) skala menengah. Sistem ini menjembatani operasional dapur (Inventory & Produksi), penjualan (Kasir/POS), hingga pembukuan otomatis (Laporan Keuangan & SPK).
 
 Dibangun dengan **Laravel 12, Tailwind CSS, dan Alpine.js**, sistem ini menggunakan pendekatan *Mobile-First Design*, menjadikannya sangat ringan, intuitif, dan siap diakses melalui tablet kasir maupun *smartphone* *owner*.
 
@@ -56,7 +56,7 @@ Ikuti langkah-langkah berikut untuk menjalankan sistem ini di komputer/server An
 1. **Clone Repositori (Jika menggunakan Git):**
    ```bash
    git clone <url-repo>
-   cd "Aplikasi Produksi Naila"
+   cd "Aplikasi Produksi 876 ASIAW"
    ```
 
 2. **Install Dependensi PHP & Node:**
@@ -70,7 +70,7 @@ Ikuti langkah-langkah berikut untuk menjalankan sistem ini di komputer/server An
    cp .env.example .env
    php artisan key:generate
    ```
-   *Buka file `.env`, sesuaikan nama database Anda (misal: `DB_DATABASE=naila_production`).*
+   *Buka file `.env`, sesuaikan nama database Anda (misal: `DB_DATABASE=876_asiaw_production`).*
 
 4. **Jalankan Migrasi & Database Seeder:**
    *(PENTING: Langkah ini akan mengisi database dengan struktur lengkap beserta data dummy yang siap pakai seperti Resep, Bahan, Transaksi Kasir, dan Pengeluaran)*

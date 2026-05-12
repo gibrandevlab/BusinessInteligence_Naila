@@ -87,7 +87,7 @@
 
     <div class="header">
         <h1>LAPORAN ANALISIS KEPUTUSAN MENU</h1>
-        <p>Aplikasi Produksi Naila - Periode: {{ $days }} Hari Terakhir</p>
+        <p>Aplikasi Produksi 876 ASIAW - Periode: {{ $days }} Hari Terakhir</p>
         <p style="font-size: 11px;">Dicetak pada: {{ \Carbon\Carbon::now()->translatedFormat('d F Y H:i') }}</p>
     </div>
 
@@ -124,13 +124,13 @@
                     <td style="font-weight: bold;">{{ $menu->name }}</td>
                     <td class="cat-{{ $menu->category }}">
                         @if($menu->category == 'Star')
-                            ⭐ PRIMADONA
+                            ⭐ Sangat laku dan keuntungan besar
                         @elseif($menu->category == 'Plowhorse')
-                            🐴 KUDA BEBAN
+                            🐴 Sangat laku, tapi keuntungan sedikit
                         @elseif($menu->category == 'Puzzle')
-                            🧩 UNTUNG TAPI SEPI
+                            🧩 Kurang laku, tapi keuntungan besar
                         @else
-                            🐶 MERUGIKAN
+                            🐶 Kurang laku dan keuntungan sedikit
                         @endif
                     </td>
                     <td>
@@ -152,7 +152,7 @@
     </table>
 
     <div class="footer">
-        Dokumen ini dihasilkan secara otomatis oleh Sistem SPK Aplikasi Produksi Naila. Data yang ditampilkan adalah data riil dari aktivitas Kasir.
+        Dokumen ini dihasilkan secara otomatis oleh Sistem SPK Aplikasi Produksi 876 ASIAW. Data yang ditampilkan adalah data riil dari aktivitas Kasir.
     </div>
 
 </body>

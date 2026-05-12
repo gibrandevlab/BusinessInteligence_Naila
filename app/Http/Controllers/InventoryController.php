@@ -103,7 +103,12 @@ class InventoryController extends Controller
         $menu->current_stock += $qty;
         $menu->save();
 
-
+        // 4. Catat Log Produksi untuk kebutuhan BI Dashboard
+        \App\Models\ProductionLog::create([
+            'menu_item_id' => $menu->id,
+            'quantity' => $qty,
+            'production_date' => now()->format('Y-m-d'),
+        ]);
 
         return redirect()->back()->with('success', "Berhasil memproduksi $qty porsi {$menu->name}.");
     }
@@ -138,5 +143,37 @@ class InventoryController extends Controller
         $ingredient->save();
 
         return redirect()->back()->with('success', 'Stok fisik berhasil disesuaikan.');
+    }
+
+    public function storeProductionOpname(\Illuminate\Http\Request $request)
+    {
+        $request->validate([
+            'menu_id' => 'required|exists:menu_items,id',
+            'actual_stock' => 'required|numeric|min:0',
+            'reason' => 'required|string',
+        ]);
+
+        $menu = \App\Models\MenuItem::findOrFail($request->menu_id);
+        
+        // Hitung selisih
+        $difference = $request->actual_stock - $menu->current_stock;
+        
+        // Jika minus (produk terbuang/basi/cacat) -> Catat sebagai kerugian/pengeluaran
+        if ($difference < 0) {
+            $lossValue = abs($difference) * $menu->hpp;
+            \App\Models\Expense::create([
+                'user_id' => \Illuminate\Support\Facades\Auth::id(),
+                'expense_date' => now()->format('Y-m-d'),
+                'category' => 'Produk Terbuang/Basi',
+                'amount' => $lossValue,
+                'description' => "Koreksi Stok Produk Jadi: {$menu->name}. Alasan: {$request->reason}",
+            ]);
+        }
+
+        // Update stok fisik menu
+        $menu->current_stock = $request->actual_stock;
+        $menu->save();
+
+        return redirect()->back()->with('success', 'Stok fisik produk siap jual berhasil disesuaikan.');
     }
 }

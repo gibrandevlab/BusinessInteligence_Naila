@@ -69,7 +69,7 @@ class ReportController extends Controller
             'totalRevenue', 'totalHpp', 'grossProfit', 'totalPurchases', 'totalExpenses', 'netProfit'
         ));
         
-        return $pdf->download('Laporan_Keuangan_Naila_' . Carbon::now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('Laporan_Keuangan_876_ASIAW_' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
 
     public function exportInventory()
@@ -84,7 +84,7 @@ class ReportController extends Controller
 
         $pdf = Pdf::loadView('reports.inventory_pdf', compact('ingredients', 'menus', 'totalAssetValue'));
         
-        return $pdf->download('Laporan_Aset_Inventori_Naila_' . Carbon::now()->format('Y-m-d') . '.pdf');
+        return $pdf->download('Laporan_Aset_Inventori_876_ASIAW_' . Carbon::now()->format('Y-m-d') . '.pdf');
     }
 
     public function storeExpense(Request $request)
