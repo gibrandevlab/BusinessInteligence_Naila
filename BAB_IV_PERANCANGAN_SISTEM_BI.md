@@ -17,17 +17,20 @@ Tabel penjualan mencakup dua level agregasi:
 
 **Level Detail: `daily_sale_items` (Migration: 2026_05_01_063331_a_create_daily_sale_items_table.php)**
 - **Atribut utama**: `id`, `daily_sale_id`, `menu_item_id`, `qty_sold`, `selling_price`, `hpp_per_item`, `subtotal_revenue`, `subtotal_hpp`, `contribution_margin`
-- **Fitur khusus**: Snapshot harga pada waktu transaksi (column `selling_price`, `hpp_per_item` tidak update retroaktif)
-- **Atribut derivatif**: `contribution_margin = subtotal_revenue - subtotal_hpp` (calculated at insertion)
-- **Buyer segmentation**: Column `buyer_type` (Eceran, Reseller, Agen) untuk multi-channel analysis
+- **Fitur khusus**: Snapshot harga pada waktu transaksi (kolom `selling_price` dan `hpp_per_item` tidak diperbarui secara retroaktif)
+- **Atribut derivatif**: `contribution_margin` dihitung pada saat insertion
+- **Buyer segmentation**: Kolom `buyer_type` (Eceran, Reseller, Agen) untuk multi-channel analysis
 
 Logika pengisian diatur dalam Model `DailySaleItem::makeFromQty()` — fungsi factory yang mengotomasi perhitungan subtotal berdasarkan formula:
-$$\text{contribution\_margin} = \text{qty\_sold} \times (\text{selling\_price} - \text{hpp\_per\_item})$$
+
+$$CM = Q \times (P_{\text{jual}} - HPP_{\text{item}})$$
+
+di mana $CM$ = contribution margin, $Q$ = kuantitas terjual, $P_{\text{jual}}$ = harga jual per item, dan $HPP_{\text{item}}$ = harga pokok produksi per item.
 
 #### B. Modul Inventory & Bahan Baku (Ingredient Module)
 **Tabel `ingredients` (Migration: 2026_05_01_063328_a_create_ingredients_table.php)**
 - **Atribut utama**: `id`, `name`, `unit`, `current_stock`, `min_stock`, `cost_per_unit`, `supplier_id`, `is_active`
-- **Dimensi analitik**: 
+- **Dimensi analitik**:
   - `cost_per_unit` (Decimal 10,2): Harga per unit bahan, diperbarui secara otomatis menggunakan Moving Average
   - `current_stock` (Decimal 10,2): Stok terkini (real-time inventory position)
   - `min_stock` (Decimal 10,2): Alert threshold untuk procurement
@@ -45,8 +48,11 @@ $$\text{contribution\_margin} = \text{qty\_sold} \times (\text{selling\_price} -
 
 **Tabel `recipe_items` (Migration: 2026_05_01_063329_b_create_recipe_items_table.php)**
 - **Atribut utama**: `id`, `recipe_id`, `ingredient_id`, `quantity` (unit sesuai ingredient)
-- **Computed attribute** (Model `RecipeItem::getCostAttribute()` ): 
-$$\text{cost\_per\_item} = \text{quantity} \times \text{ingredient.cost\_per\_unit}$$
+- **Computed attribute** (Model `RecipeItem::getCostAttribute()`):
+
+$$C_{\text{item}} = q_i \times c_i$$
+
+di mana $q_i$ = kuantitas bahan ke-$i$ dalam resep, dan $c_i$ = harga per unit bahan ke-$i$.
 
 **Tabel `menu_items` (Migration: 2026_05_01_063330_a_create_menu_items_table.php)**
 - **Atribut utama**: `id`, `recipe_id`, `name`, `category`, `price_eceran`, `price_reseller`, `price_agen`, `hpp`, `current_stock`, `is_active`
@@ -71,7 +77,7 @@ $$\text{cost\_per\_item} = \text{quantity} \times \text{ingredient.cost\_per\_un
 #### F. Modul Log Produksi (Production Log Module)
 **Tabel `production_logs` (Migration: 2026_05_10_110703_create_production_logs_table.php)**
 - **Atribut utama**: `id`, `menu_item_id`, `quantity`, `production_date`
-- **Purpose**: Recorded setiap kali produksi dilakukan (melalui `InventoryController::storeProduction()`)
+- **Purpose**: Dicatat setiap kali produksi dilakukan (melalui `InventoryController::storeProduction()`)
 - **Kegunaan BI**: Production efficiency analysis, waste tracking (gap antara production dan actual sales)
 
 ---
@@ -87,17 +93,17 @@ Berdasarkan struktur tabel di atas, sistem BI dibangun atas empat dimensi utama:
 | **Channel** | Segmentasi customer berdasarkan buyer type | `daily_sale_items.buyer_type` | Eceran, Reseller, Agen |
 | **Organization** | User/operator yang melakukan transaksi | `daily_sales.user_id`, `purchases.user_id` | Kasir, Inventory Manager, Admin |
 
-Atribut financial yang menjadi Key Performance Indicator (KPI) utama (dalam backticks untuk kode database):
+Atribut financial yang menjadi Key Performance Indicator (KPI) utama:
 
 | KPI | Formula | Sumber | Interpretasi |
 |-----|---------|--------|--------------|
 | **Revenue** | `SUM(daily_sale_items.subtotal_revenue)` | daily sales → daily sale items | Total pendapatan penjualan |
 | **HPP (COGS)** | `SUM(daily_sale_items.subtotal_hpp)` | daily sales → daily sale items | Total biaya produksi produk terjual |
-| **Gross Profit** | Revenue - HPP | daily sales.gross profit | Laba kotor sebelum biaya operasional |
+| **Gross Profit** | Revenue − HPP | daily_sales.gross_profit | Laba kotor sebelum biaya operasional |
 | **Contribution Margin** | `daily_sale_items.contribution_margin` per item | daily sale items | Kontribusi keuntungan per produk |
-| **Food Cost %** | (HPP / Revenue) × 100% | DashboardController formula | Persentase biaya bahan vs penjualan |
+| **Food Cost %** | $(HPP / Revenue) \times 100\%$ | DashboardController formula | Persentase biaya bahan vs penjualan |
 | **Pengeluaran Operasional** | `SUM(expenses.amount)` | expenses | Biaya non-COGS (gaji, listrik, dll) |
-| **Net Profit** | Gross Profit - Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
+| **Net Profit** | Gross Profit − Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
 
 ---
 
@@ -108,7 +114,7 @@ Atribut financial yang menjadi Key Performance Indicator (KPI) utama (dalam back
 Dalam sistem Aplikasi Produksi Naila, ekstraksi data dilakukan secara **real-time event-driven** tanpa batch processing eksplisit. Setiap transaksi langsung disimpan ke database melalui Controller-layer API.
 
 #### A. Extract dari Penjualan (PosController::store)
-**File**: [app/Http/Controllers/PosController.php](app/Http/Controllers/PosController.php)
+**File**: `app/Http/Controllers/PosController.php`
 
 Proses ekstraksi data penjualan dimulai ketika kasir menginput transaksi:
 
@@ -116,10 +122,10 @@ Proses ekstraksi data penjualan dimulai ketika kasir menginput transaksi:
 1. Input User: Cart JSON (array of {id, qty})
 2. Validasi: cart tidak boleh kosong
 3. Ekstraksi Data dari Form:
-   - `buyer_type` (Eceran/Reseller/Agen)
-   - `payment_method`
-   - cart items (`menu_item_id`, `quantity`)
-   - current timestamp (`sale_date` = Carbon::now())
+   - buyer_type (Eceran/Reseller/Agen)
+   - payment_method
+   - cart items (menu_item_id, quantity)
+   - current timestamp (sale_date = Carbon::now())
 4. Load Related Data:
    - MenuItem::with('recipe.items.ingredient') — fetch HPP dependencies
 ```
@@ -134,7 +140,7 @@ $sale = \App\Models\DailySale::create([
 ]);
 
 foreach ($cart as $item) {
-    $menu = MenuItem::with('recipe.items.ingredient')->find($item['id']); // Extract menu + ingredient
+    $menu = MenuItem::with('recipe.items.ingredient')->find($item['id']);
 ```
 
 **Data Extraction Points**:
@@ -143,26 +149,26 @@ foreach ($cart as $item) {
 3. Stok (raw & finished goods) di-extract dari `MenuItem::$current_stock` dan `Ingredient::$current_stock`
 
 #### B. Extract dari Pembelian (InventoryController::storePurchase)
-**File**: [app/Http/Controllers/InventoryController.php](app/Http/Controllers/InventoryController.php)
+**File**: `app/Http/Controllers/InventoryController.php`
 
 ```
-1. Input User: `ingredient_id`, `supplier_id`, `quantity`, `total_price`
+1. Input User: ingredient_id, supplier_id, quantity, total_price
 2. Validasi: quantity > 0, ingredient exists
 3. Ekstraksi & Kalkulasi:
-   - Old Total Value = `current_stock` × `cost_per_unit`
+   - Old Total Value = current_stock × cost_per_unit
    - Beli Quantity & Total Price dari form user
 ```
 
 #### C. Extract dari Produksi (InventoryController::storeProduction)
 ```
-1. Input User: `menu_id`, `quantity`
+1. Input User: menu_id, quantity
 2. Extract menu dengan relasi: with('recipe.items.ingredient')
-3. Load: `production_capacity` (derived attribute untuk validasi stok cukup)
+3. Load: production_capacity (derived attribute untuk validasi stok cukup)
 4. Catat ke ProductionLog
 ```
 
 #### D. Extract dari Dashboard Aggregation (DashboardController::index)
-**File**: [app/Http/Controllers/DashboardController.php](app/Http/Controllers/DashboardController.php)
+**File**: `app/Http/Controllers/DashboardController.php`
 
 Dashboard melakukan **extract-on-demand** dengan period filtering:
 
@@ -186,7 +192,7 @@ if ($period === 'today') {
 $sales = $querySales->get(); // Execute extraction
 ```
 
-**Extract Pattern**: 
+**Extract Pattern**:
 - Temporal filtering pada query level (WHERE clause)
 - Eager loading relasi yang diperlukan
 - Agregasi di PHP memory (collection operations)
@@ -199,10 +205,18 @@ Transformasi data melibatkan kalkulasi matematika yang secara otomatis dilakukan
 
 #### A. Transform 1: Kalkulasi HPP Produk (Harga Pokok Penjualan)
 
-**Lokasi Logika**: [app/Models/Recipe.php](app/Models/Recipe.php) method `calculateHpp()`
+**Lokasi Logika**: `app/Models/Recipe.php` — method `calculateHpp()`
 
 Rumus HPP per porsi:
-$$\text{HPP per porsi} = \frac{\sum (\text{ingredient quantity} \times \text{ingredient cost per unit})}{\text{serving qty}} + \text{packaging cost} + \text{overhead cost}$$
+
+$$HPP_{\text{porsi}} = \frac{\displaystyle\sum_{i=1}^{n} (q_i \times c_i)}{S} + P_k + O_h$$
+
+di mana:
+- $q_i$ = kuantitas bahan ke-$i$ dalam satu batch resep
+- $c_i$ = harga per unit bahan ke-$i$ (`cost_per_unit`)
+- $S$ = jumlah porsi per batch (`serving_qty`)
+- $P_k$ = biaya kemasan per porsi (`packaging_cost`)
+- $O_h$ = biaya overhead per porsi (`overhead_cost`)
 
 **Implementasi**:
 ```php
@@ -212,7 +226,6 @@ public function calculateHpp(): float
     $totalBahan = 0;
     foreach ($this->items as $item) {
         $ingredient = $item->ingredient;
-        // cost_per_unit adalah harga per 1 unit (gram/ml/pcs)
         $totalBahan += $item->quantity * $ingredient->cost_per_unit;
     }
     
@@ -223,20 +236,31 @@ public function calculateHpp(): float
 }
 ```
 
-**Trigger**: Dijalankan setiap kali ada perubahan ingredient cost (via `InventoryController::storePurchase()`)
+**Trigger**: Dijalankan setiap kali ada perubahan ingredient cost (via `InventoryController::storePurchase()`).
 
-**Data Quality Check**: Validasi serving_qty > 0 (denominator guard) untuk mencegah division by zero.
+**Data Quality Check**: Validasi $S > 0$ (denominator guard) untuk mencegah pembagian dengan nol.
 
 ---
 
 #### B. Transform 2: Kalkulasi Contribution Margin Per Item Penjualan
 
-**Lokasi Logika**: [app/Models/DailySaleItem.php](app/Models/DailySaleItem.php) method `makeFromQty()` dan [app/Http/Controllers/PosController.php](app/Http/Controllers/PosController.php)
+**Lokasi Logika**: `app/Models/DailySaleItem.php` — method `makeFromQty()`
 
-Rumus:
-$$\text{subtotal\_revenue} = \text{qty\_sold} \times \text{selling\_price}$$
-$$\text{subtotal\_hpp} = \text{qty\_sold} \times \text{hpp\_per\_item}$$
-$$\text{contribution\_margin} = \text{subtotal\_revenue} - \text{subtotal\_hpp}$$
+Rumus kalkulasi subtotal dan contribution margin:
+
+$$R_{\text{sub}} = Q \times P_{\text{jual}}$$
+
+$$HPP_{\text{sub}} = Q \times HPP_{\text{item}}$$
+
+$$CM = R_{\text{sub}} - HPP_{\text{sub}}$$
+
+di mana:
+- $R_{\text{sub}}$ = subtotal pendapatan (`subtotal_revenue`)
+- $Q$ = kuantitas terjual (`qty_sold`)
+- $P_{\text{jual}}$ = harga jual sesuai segmen pembeli (`selling_price`)
+- $HPP_{\text{sub}}$ = subtotal harga pokok (`subtotal_hpp`)
+- $HPP_{\text{item}}$ = HPP per item snapshot saat transaksi (`hpp_per_item`)
+- $CM$ = contribution margin (`contribution_margin`)
 
 **Implementasi** (Factory Method):
 ```php
@@ -254,28 +278,33 @@ public static function makeFromQty(DailySale $sale, MenuItem $menu, int $qty, st
     $subtotalHpp     = $qty * $menu->hpp;
 
     return new self([
-        'qty_sold'           => $qty,
-        'selling_price'      => $sellingPrice,
-        'hpp_per_item'       => $menu->hpp,
-        'subtotal_revenue'   => $subtotalRevenue,
-        'subtotal_hpp'       => $subtotalHpp,
-        'contribution_margin'=> $subtotalRevenue - $subtotalHpp, // TRANSFORM HAPPEN HERE
+        'qty_sold'            => $qty,
+        'selling_price'       => $sellingPrice,
+        'hpp_per_item'        => $menu->hpp,
+        'subtotal_revenue'    => $subtotalRevenue,
+        'subtotal_hpp'        => $subtotalHpp,
+        'contribution_margin' => $subtotalRevenue - $subtotalHpp,
     ]);
 }
 ```
 
-**Data Quality**: Nilai negative selling_price atau hpp akan tertangkap di validation layer (request validation di PosController).
+**Data Quality**: Nilai negatif pada selling price atau HPP tertangkap di validation layer (request validation di PosController).
 
 ---
 
-#### C. Transform 3: Aggregasi Daily Sales Header
+#### C. Transform 3: Agregasi Daily Sales Header
 
-**Lokasi Logika**: [app/Models/DailySale.php](app/Models/DailySale.php) method `recalculateTotals()`
+**Lokasi Logika**: `app/Models/DailySale.php` — method `recalculateTotals()`
 
-Proses aggregasi dari detail items ke header:
-$$\text{total\_revenue} = \sum (\text{daily\_sale\_items.subtotal\_revenue})$$
-$$\text{total\_hpp} = \sum (\text{daily\_sale\_items.subtotal\_hpp})$$
-$$\text{gross\_profit} = \text{total\_revenue} - \text{total\_hpp}$$
+Proses agregasi dari detail items ke header:
+
+$$R_{\text{total}} = \sum_{i} R_{\text{sub},i}$$
+
+$$HPP_{\text{total}} = \sum_{i} HPP_{\text{sub},i}$$
+
+$$GP = R_{\text{total}} - HPP_{\text{total}}$$
+
+di mana $GP$ = gross profit, dan indeks $i$ merentang seluruh item dalam satu record `daily_sale`.
 
 **Implementasi**:
 ```php
@@ -292,19 +321,30 @@ public function recalculateTotals(): void
 
 **Trigger**: Dipanggil di `PosController::store()` setelah semua items diinsert.
 
-**Consistency Check**: Sum dari items harus equal dengan header totals (validated post-transaction).
+**Consistency Check**: Jumlah dari items harus sama dengan header totals (divalidasi pasca-transaksi).
 
 ---
 
 #### D. Transform 4: Moving Average Cost of Ingredient
 
-**Lokasi Logika**: [app/Http/Controllers/InventoryController.php](app/Http/Controllers/InventoryController.php) method `storePurchase()`
+**Lokasi Logika**: `app/Http/Controllers/InventoryController.php` — method `storePurchase()`
 
-Metode **Weighted Average** digunakan untuk update cost_per_unit:
-$$\text{Old Total Value} = \text{current\_stock} \times \text{cost\_per\_unit}_{\text{old}}$$
-$$\text{New Total Value} = \text{Old Total Value} + \text{Purchase Price}$$
-$$\text{New Total Stock} = \text{current\_stock} + \text{Purchase Quantity}$$
-$$\text{cost\_per\_unit}_{\text{new}} = \frac{\text{New Total Value}}{\text{New Total Stock}}$$
+Metode **Weighted Average** digunakan untuk memperbarui harga pokok bahan:
+
+$$TV_{\text{lama}} = S_{\text{lama}} \times C_{\text{lama}}$$
+
+$$TV_{\text{baru}} = TV_{\text{lama}} + P_{\text{beli}}$$
+
+$$S_{\text{baru}} = S_{\text{lama}} + Q_{\text{beli}}$$
+
+$$C_{\text{baru}} = \frac{TV_{\text{baru}}}{S_{\text{baru}}}$$
+
+di mana:
+- $TV$ = total nilai inventori (*total value*)
+- $S$ = stok saat ini (`current_stock`)
+- $C$ = harga pokok per unit (`cost_per_unit`)
+- $P_{\text{beli}}$ = total harga pembelian (`total_price`)
+- $Q_{\text{beli}}$ = kuantitas yang dibeli (`quantity`)
 
 **Implementasi**:
 ```php
@@ -313,14 +353,16 @@ $oldTotalValue = $ingredient->current_stock * $ingredient->cost_per_unit;
 $newTotalValue = $oldTotalValue + $request->total_price;
 $newTotalStock = $ingredient->current_stock + $request->quantity;
 
-$newAvgPrice = $newTotalStock > 0 ? ($newTotalValue / $newTotalStock) : $ingredient->cost_per_unit;
+$newAvgPrice = $newTotalStock > 0
+    ? ($newTotalValue / $newTotalStock)
+    : $ingredient->cost_per_unit;
 
 $ingredient->current_stock = $newTotalStock;
 $ingredient->cost_per_unit = $newAvgPrice;
 $ingredient->save();
 ```
 
-**Cascade Update**: Setelah ingredient cost diupdate, semua menu yang menggunakan ingredient ini harus di-recalculate HPP-nya:
+**Cascade Update**: Setelah ingredient cost diperbarui, semua menu yang menggunakan ingredient tersebut perlu direcalculate HPP-nya:
 ```php
 foreach ($ingredient->recipeItems as $recipeItem) {
     $recipeItem->recipe->menuItem?->syncHpp();
@@ -331,9 +373,11 @@ foreach ($ingredient->recipeItems as $recipeItem) {
 
 #### E. Transform 5: Kalkulasi Food Cost Percentage
 
-**Lokasi Logika**: [app/Http/Controllers/DashboardController.php](app/Http/Controllers/DashboardController.php)
+**Lokasi Logika**: `app/Http/Controllers/DashboardController.php`
 
-$$\text{Food Cost \%} = \frac{\text{total\_hpp}}{\text{total\_revenue}} \times 100\%$$
+$$FC\% = \frac{HPP_{\text{total}}}{R_{\text{total}}} \times 100\%$$
+
+di mana $FC\%$ = food cost percentage, $HPP_{\text{total}}$ = total harga pokok penjualan, dan $R_{\text{total}}$ = total pendapatan.
 
 **Implementasi**:
 ```php
@@ -344,7 +388,7 @@ $kpi = [
 ];
 ```
 
-**Safeguard**: Division-by-zero check (jika revenue = 0, return 0% bukan infinity).
+**Safeguard**: Pengecekan pembagian dengan nol — jika $R_{\text{total}} = 0$, maka $FC\% = 0$.
 
 ---
 
@@ -354,14 +398,14 @@ Data cleaning dilakukan pada dua tahap: **input validation** dan **operational v
 
 #### A. Input Validation (Request Level)
 
-Setiap endpoint Controller mengimplementasikan `$request->validate()` untuk membrane antara user input dan database:
+Setiap endpoint Controller mengimplementasikan `$request->validate()` sebagai lapisan pertahanan antara input pengguna dan database:
 
 **PosController::store()**
 ```php
 $request->validate([
     'buyer_type'     => 'required|string',
     'payment_method' => 'required|string',
-    'cart'           => 'required|string', // JSON validation at presentation layer
+    'cart'           => 'required|string',
 ]);
 
 $cart = json_decode($request->cart, true);
@@ -373,10 +417,10 @@ if (empty($cart)) {
 **InventoryController::storePurchase()**
 ```php
 $request->validate([
-    'ingredient_id' => 'required|exists:ingredients,id',  // Referential integrity
-    'supplier_id'   => 'nullable|exists:suppliers,id',     // Optional FK
-    'quantity'      => 'required|numeric|min:0.1',         // Type & range check
-    'total_price'   => 'required|numeric|min:0',           // No negative prices
+    'ingredient_id' => 'required|exists:ingredients,id',
+    'supplier_id'   => 'nullable|exists:suppliers,id',
+    'quantity'      => 'required|numeric|min:0.1',
+    'total_price'   => 'required|numeric|min:0',
 ]);
 ```
 
@@ -384,7 +428,7 @@ $request->validate([
 ```php
 $request->validate([
     'menu_id'  => 'required|exists:menu_items,id',
-    'quantity' => 'required|integer|min:1', // Positive integers only
+    'quantity' => 'required|integer|min:1',
 ]);
 ```
 
@@ -392,21 +436,21 @@ $request->validate([
 
 Selain input validation, terdapat validasi bisnis untuk memastikan transaksi logis:
 
-**Stock Sufficiency Check** (InventoryController::storeProduction):
+**Stock Sufficiency Check** (`InventoryController::storeProduction`):
 ```php
 if ($menu->production_capacity < $qty) {
-    return redirect()->back()->with('error', 'Bahan mentah tidak cukup untuk memproduksi sejumlah ini!');
+    return redirect()->back()
+        ->with('error', 'Bahan mentah tidak cukup untuk memproduksi sejumlah ini!');
 }
 ```
 
-Atribut `production_capacity` di-compute dari ingredient stock vs recipe requirements.
+Atribut `production_capacity` dihitung dari stok ingredient yang tersedia dibandingkan kebutuhan resep.
 
-**Cost Consistency Check** (InventoryController::storeOpname):
+**Cost Consistency Check** (`InventoryController::storeOpname`):
 ```php
 $difference = $request->actual_stock - $ingredient->current_stock;
 
 if ($difference < 0) {
-    // Kerugian material tercatat sebagai Expense
     $lossValue = abs($difference) * $ingredient->cost_per_unit;
     Expense::create([...]);
 }
@@ -418,9 +462,9 @@ Sistem mencatat discrepancy stok sebagai expense (waste tracking) — fitur data
 
 #### C. Temporal Consistency (Date Validation)
 
-Semua tanggal disimpan dalam format `DATE` dan tidak boleh di masa depan (implicit dalam business logic):
+Semua tanggal disimpan dalam format `DATE` dan ditetapkan dari sisi server (implicit dalam business logic):
 ```php
-'purchase_date' => now()->format('Y-m-d'),
+'purchase_date'   => now()->format('Y-m-d'),
 'production_date' => now()->format('Y-m-d'),
 ```
 
@@ -436,7 +480,7 @@ $table->foreignId('daily_sale_id')->constrained()->cascadeOnDelete();
 $table->foreignId('menu_item_id')->constrained()->cascadeOnDelete();
 ```
 
-Cascade delete policy memastikan orphaned records tidak tersisa.
+Cascade delete policy memastikan tidak ada orphaned records yang tersisa.
 
 ---
 
@@ -448,79 +492,89 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 
 #### Fact Tables
 
-**Fact Table: daily_sale_items** (granularity: per product per day per channel)
+**Fact Table: `daily_sale_items`** (granularity: per produk per hari per channel)
+
 | Dimensi | Tabel Referensi | Atribut |
 |---------|-----------------|---------|
-| Time    | Implicit        | `sale_date` (dari `daily_sales`) |
-| Product | menu_items      | menu_item_id, name, category, recipe_id |
-| Channel | Implicit        | buyer_type (Eceran/Reseller/Agen) |
-| Organization | users      | user_id (kasir yang menginput) |
+| Time | Implicit | `sale_date` (dari `daily_sales`) |
+| Product | menu_items | `menu_item_id`, `name`, `category`, `recipe_id` |
+| Channel | Implicit | `buyer_type` (Eceran/Reseller/Agen) |
+| Organization | users | `user_id` (kasir yang menginput) |
 
 **Measures** (numeric facts):
-- `qty_sold` (quantity)
-- `subtotal_revenue` (revenue)
+- `qty_sold` (kuantitas)
+- `subtotal_revenue` (pendapatan)
 - `subtotal_hpp` (COGS)
-- `contribution_margin` (profit at line-item level)
+- `contribution_margin` (laba di level line-item)
 
-**Fact Table: production_logs** (granularity: per product per production day)
+**Fact Table: `production_logs`** (granularity: per produk per hari produksi)
+
 | Atribut | Tipe | Purpose |
 |---------|------|---------|
-| menu_item_id | FK | Product dimension |
-| quantity | INT | Production volume |
-| production_date | DATE | Time dimension |
+| `menu_item_id` | FK | Product dimension |
+| `quantity` | INT | Volume produksi |
+| `production_date` | DATE | Time dimension |
 
 ---
 
 #### Dimension Tables
 
-**Dimension: Time** (Calendar hierarchy)
-- Source: `daily_sales.sale_date`, `purchase.purchase_date`, `production_logs.production_date`
+**Dimensi: Time** (Calendar hierarchy)
+- Source: `daily_sales.sale_date`, `purchases.purchase_date`, `production_logs.production_date`
 - Granularity: Daily
 - Hierarchy: Day → Week → Month → Year
 
-**Dimension: Product (Menu)** 
-- Table: `menu_items`, `recipes`, `recipe_items`
-- Attributes: name, category, hpp, price_eceran, price_reseller, price_agen
+**Dimensi: Product (Menu)**
+- Tabel: `menu_items`, `recipes`, `recipe_items`
+- Atribut: `name`, `category`, `hpp`, `price_eceran`, `price_reseller`, `price_agen`
 - Hierarchy: Category → Menu Item → Recipe
 
-**Dimension: Channel**
+**Dimensi: Channel**
 - Source: `daily_sale_items.buyer_type`
 - Values: {Eceran, Reseller, Agen}
 
-**Dimension: Ingredient (for Supply Chain Analysis)**
-- Table: ingredients
-- Attributes: name, unit, supplier_id, cost_per_unit, current_stock
+**Dimensi: Ingredient** (untuk Supply Chain Analysis)
+- Tabel: `ingredients`
+- Atribut: `name`, `unit`, `supplier_id`, `cost_per_unit`, `current_stock`
 - Support: Waste analysis, procurement optimization
 
 ---
 
 ### IV.3.2 Klasifikasi BCG Matrix: Implementasi Decision Tree
 
-**File Referensi**: [app/Http/Controllers/AnalysisController.php](app/Http/Controllers/AnalysisController.php) method `runClassification()` dan [app/Http/Controllers/SpkController.php](app/Http/Controllers/SpkController.php) method `index()`
+**File Referensi**: `app/Http/Controllers/AnalysisController.php` — method `runClassification()` dan `app/Http/Controllers/SpkController.php` — method `index()`
 
 #### A. Metrik Klasifikasi
 
 Sistem menggunakan dua dimensi BCG untuk klasifikasi menu:
 
-**Dimensi 1: Menu Mix (Popularitas/Market Share) — MM%**
-$$\text{MM\%} = \frac{\text{qty\_sold\_menu}}{\text{total\_qty\_all}} \times 100\%$$
+**Dimensi 1: Menu Mix (Popularitas/Market Share) — $MM\%$**
+
+$$MM\%_j = \frac{Q_j}{Q_{\text{total}}} \times 100\%$$
+
+di mana $Q_j$ = kuantitas terjual menu ke-$j$, dan $Q_{\text{total}}$ = total kuantitas seluruh menu.
 
 Threshold (simple average dari semua menu):
-$$\text{Average MM} = \frac{100\%}{N}$$
-dimana N = jumlah menu item yang terjual (yang memiliki qty > 0).
+
+$$\overline{MM} = \frac{100\%}{N}$$
+
+di mana $N$ = jumlah menu item yang terjual ($Q_j > 0$).
 
 Interpretasi:
-- **MM ≥ Average MM**: High Market Share ("Market Leader")
-- **MM < Average MM**: Low Market Share ("Niche Product")
+- $MM\%_j \geq \overline{MM}$: *High Market Share* ("Market Leader")
+- $MM\%_j < \overline{MM}$: *Low Market Share* ("Niche Product")
 
-**Dimensi 2: Contribution Margin (Profitabilitas) — CM**
-$$\text{CM per item} = \frac{\text{total\_contribution\_margin\_menu}}{\text{qty\_sold\_menu}}$$
+**Dimensi 2: Contribution Margin (Profitabilitas) — $CM$**
 
-$$\text{Average CM} = \frac{\text{total\_contribution\_margin\_all}}{\text{total\_qty\_all}}$$
+$$CM_{\text{per item},j} = \frac{CM_{j}}{Q_j}$$
+
+$$\overline{CM} = \frac{CM_{\text{total}}}{Q_{\text{total}}}$$
+
+di mana $CM_j$ = total contribution margin menu ke-$j$, dan $CM_{\text{total}}$ = total contribution margin semua menu.
 
 Interpretasi:
-- **CM ≥ Average CM**: High Profit ("High Margin")
-- **CM < Average CM**: Low Profit ("Low Margin")
+- $CM_{\text{per item},j} \geq \overline{CM}$: *High Profit* ("High Margin")
+- $CM_{\text{per item},j} < \overline{CM}$: *Low Profit* ("Low Margin")
 
 ---
 
@@ -528,12 +582,12 @@ Interpretasi:
 
 Kombinasi kedua dimensi menghasilkan empat kategori BCG:
 
-| MM vs CM | CM ≥ Avg | CM < Avg |
-|----------|----------|----------|
-| **MM ≥ Avg** | **STAR** 🌟 | **PLOWHORSE** 🐴 |
-| **MM < Avg** | **PUZZLE** 🧩 | **DOG** 🐕 |
+| $MM\%$ vs $CM$ | $CM \geq \overline{CM}$ | $CM < \overline{CM}$ |
+|----------------|-------------------------|----------------------|
+| $MM\% \geq \overline{MM}$ | **STAR** 🌟 | **PLOWHORSE** 🐴 |
+| $MM\% < \overline{MM}$ | **PUZZLE** 🧩 | **DOG** 🐕 |
 
-**Kode Implementasi** (SpkController::index):
+**Kode Implementasi** (`SpkController::index`):
 ```php
 if ($mmPercent >= $averageMM && $cmPerItem >= $averageCM) {
     $category = 'Star';
@@ -552,8 +606,8 @@ if ($mmPercent >= $averageMM && $cmPerItem >= $averageCM) {
 
 #### C. Kategori & Rekomendasi Tindakan
 
-| Kategori | MM% | CM | Karakteristik | Rekomendasi Strategis |
-|----------|-----|----|--------------------|----------------------|
+| Kategori | $MM\%$ | $CM$ | Karakteristik | Rekomendasi Strategis |
+|----------|--------|------|---------------|-----------------------|
 | **Star** | ↑ | ↑ | Best seller dengan margin tinggi | Pertahankan kualitas; jadikan signature; tingkatkan promosi |
 | **Plowhorse** | ↑ | ↓ | High volume, low margin | Naikkan harga bertahap atau kurangi porsi; optimasi cost |
 | **Puzzle** | ↓ | ↑ | Low volume, high margin | Gencar promosi; bundling; discount strategis untuk acquire volume |
@@ -563,30 +617,33 @@ if ($mmPercent >= $averageMM && $cmPerItem >= $averageCM) {
 
 ### IV.3.3 Prediksi Penjualan: Linear Regression Model
 
-**File Referensi**: [app/Http/Controllers/AnalysisController.php](app/Http/Controllers/AnalysisController.php) method `runRegression()`
+**File Referensi**: `app/Http/Controllers/AnalysisController.php` — method `runRegression()`
 
 #### A. Model Matematika
 
 Sistem mengimplementasikan **Simple Linear Regression** dengan formula:
+
 $$\hat{y} = a + bx$$
 
-dimana:
-- $x$ = urutan hari (1, 2, 3, ...)
-- $y$ = qty_sold pada hari tersebut
+di mana:
+- $x$ = urutan hari ke-$x$ dalam periode observasi ($x = 1, 2, 3, \ldots, n$)
+- $y$ = kuantitas terjual pada hari ke-$x$
 - $a$ = intercept (baseline volume)
-- $b$ = slope (trend per hari)
+- $b$ = slope (tren per hari)
 
 #### B. Parameter Estimasi (Least Squares Method)
 
-$$b = \frac{n \sum xy - \sum x \sum y}{n \sum x^2 - (\sum x)^2}$$
+$$b = \frac{n \displaystyle\sum_{i=1}^{n} x_i y_i - \left(\sum_{i=1}^{n} x_i\right)\!\left(\sum_{i=1}^{n} y_i\right)}{n \displaystyle\sum_{i=1}^{n} x_i^2 - \left(\sum_{i=1}^{n} x_i\right)^2}$$
 
-$$a = \bar{y} - b \bar{x}$$
+$$a = \bar{y} - b\bar{x}$$
+
+di mana $\bar{x}$ dan $\bar{y}$ adalah rata-rata dari masing-masing variabel.
 
 **Implementasi Kode**:
 ```php
-$n = $dailyData->count(); // Jumlah hari observasi
-$xValues = range(1, $n);  // Sequence [1, 2, 3, ..., n]
-$yValues = $dailyData->pluck('daily_qty')->toArray(); // Observed sales
+$n = $dailyData->count();
+$xValues = range(1, $n);
+$yValues = $dailyData->pluck('daily_qty')->toArray();
 
 $sumX = array_sum($xValues);
 $sumY = array_sum($yValues);
@@ -608,10 +665,11 @@ $a = $meanY - ($b * $meanX);
 
 #### C. Prediksi (Forecast)
 
-Untuk $k$ hari ke depan:
-$$\hat{y}_{n+k} = a + b(n + k)$$
+Untuk $k$ hari ke depan setelah hari terakhir observasi $n$:
 
-Dengan validasi $\hat{y} \geq 0$ (tidak ada negative forecast):
+$$\hat{y}_{n+k} = a + b(n + k), \quad k = 1, 2, 3$$
+
+Dengan validasi $\hat{y}_{n+k} \geq 0$ untuk mencegah prediksi bernilai negatif:
 
 ```php
 $nextDayPredictions = [];
@@ -619,61 +677,66 @@ for ($day = 1; $day <= 3; $day++) {
     $predictedX = $n + $day;
     $predictedY = max(0, round($a + ($b * $predictedX)));
     $nextDayPredictions[] = [
-        'day_label' => ['Besok', 'Lusa', 'Besoknya lagi'][$day-1],
-        'predicted_qty' => $predictedY
+        'day_label'      => ['Besok', 'Lusa', 'Besoknya lagi'][$day-1],
+        'predicted_qty'  => $predictedY,
     ];
 }
 ```
 
 **Interpretasi Slope**:
-- **$b > 0$**: Trend naik (penjualan meningkat)
-- **$b < 0$**: Trend turun (penjualan menurun)
-- **$b ≈ 0$**: Trend flat/stabil
+- $b > 0$: Tren naik (penjualan meningkat)
+- $b < 0$: Tren turun (penjualan menurun)
+- $b \approx 0$: Tren stabil/flat
 
 #### D. Reliability Indicator (Data Confidence Score)
 
-**File**: AnalysisController::calculateDataScore()
+**File**: `AnalysisController::calculateDataScore()`
 
 Sistem mengevaluasi kualitas data sebelum memberikan prediksi:
 
-$$\text{Overall Score} = \frac{\text{dayScore} + \text{recordScore} + \text{menuScore}}{3}$$
+$$\text{Score} = \frac{S_d + S_r + S_m}{3}$$
 
-dimana:
-- **dayScore** = $\min(\frac{\text{distinct days}}{30}, 1) \times 100$ (target: 30 hari)
-- **recordScore** = $\min(\frac{\text{total records}}{100}, 1) \times 100$ (target: 100 transaksi)
-- **menuScore** = $\min(\frac{\text{distinct menus}}{3}, 1) \times 100$ (target: 3 produk)
+di mana masing-masing komponen dihitung sebagai berikut:
+
+$$S_d = \min\!\left(\frac{d}{30},\, 1\right) \times 100$$
+
+$$S_r = \min\!\left(\frac{r}{100},\, 1\right) \times 100$$
+
+$$S_m = \min\!\left(\frac{m}{3},\, 1\right) \times 100$$
+
+dengan $d$ = jumlah hari berbeda yang tercatat (target: 30 hari), $r$ = total jumlah transaksi (target: 100 transaksi), dan $m$ = jumlah menu aktif (target: 3 produk).
 
 **Klasifikasi Confidence**:
-- **≥ 70%**: "Cukup Baik" → Prediksi dapat dipercaya
-- **40-70%**: "Sedang" → Prediksi perlu cross-validation dengan expert judgment
-- **< 40%**: "Masih Sedikit" → Prediksi masih "learning phase", akurasi tidak guarantee
+- $\text{Score} \geq 70$: "Cukup Baik" — prediksi dapat dipercaya
+- $40 \leq \text{Score} < 70$: "Sedang" — prediksi perlu cross-validation dengan expert judgment
+- $\text{Score} < 40$: "Masih Sedikit" — model masih dalam *learning phase*, akurasi tidak terjamin
 
 **Implementasi**:
 ```php
 private function calculateDataScore(): array
 {
-    $days = DailySale::select('sale_date')->distinct()->count();
+    $days    = DailySale::select('sale_date')->distinct()->count();
     $records = DailySaleItem::count();
-    $menus = MenuItem::count();
+    $menus   = MenuItem::count();
 
-    $dayScore = min(($days / 30) * 100, 100);
+    $dayScore    = min(($days / 30) * 100, 100);
     $recordScore = min(($records / 100) * 100, 100);
-    $menuScore = min(($menus / 3) * 100, 100);
+    $menuScore   = min(($menus / 3) * 100, 100);
 
     $overall = round(($dayScore + $recordScore + $menuScore) / 3);
 
     if ($overall >= 70) {
-        $level = 'good';
+        $level   = 'good';
         $message = 'Sistem sudah memiliki cukup data untuk mulai mengenali pola penjualan Anda.';
     } elseif ($overall >= 40) {
-        $level = 'moderate';
+        $level   = 'moderate';
         $message = 'Tebakan AI masih bisa meleset. Terus gunakan aplikasi untuk memperbanyak data.';
     } else {
-        $level = 'low';
+        $level   = 'low';
         $message = 'Akurasinya belum bisa dijadikan patokan utama. Tebakan akan semakin akurat setelah data terkumpul.';
     }
 
-    return compact('overall', 'level', 'message', '...');
+    return compact('overall', 'level', 'message');
 }
 ```
 
@@ -681,26 +744,28 @@ private function calculateDataScore(): array
 
 ### IV.3.4 Early Warning System: Decision Tree untuk Prediksi Trend
 
-**File Referensi**: [app/Http/Controllers/AnalysisController.php](app/Http/Controllers/AnalysisController.php) method `runClassification()`
+**File Referensi**: `app/Http/Controllers/AnalysisController.php` — method `runClassification()`
 
 #### A. Trend Calculation
 
-Menggunakan **simple trend detection** dengan membagi data penjualan menjadi dua periode:
+Sistem menggunakan **simple trend detection** dengan membagi data penjualan menjadi dua periode:
 
-$$\text{First Half Qty} = \sum_{i=1}^{\lfloor n/2 \rfloor} \text{qty\_sold}_i$$
+$$Q_{\text{awal}} = \sum_{i=1}^{\lfloor n/2 \rfloor} q_i$$
 
-$$\text{Second Half Qty} = \sum_{i=\lceil n/2 \rceil+1}^{n} \text{qty\_sold}_i$$
+$$Q_{\text{akhir}} = \sum_{i=\lfloor n/2 \rfloor + 1}^{n} q_i$$
+
+di mana $q_i$ = kuantitas terjual pada hari ke-$i$, dan $n$ = total jumlah hari observasi.
 
 **Trend Rules**:
-- **Naik**: Jika Second Half > First Half × 1.1 (peningkatan > 10%)
-- **Turun**: Jika Second Half < First Half × 0.9 (penurunan > 10%)
-- **Stabil**: Selainnya
+- **Naik**: Jika $Q_{\text{akhir}} > 1{,}1 \times Q_{\text{awal}}$ (peningkatan $> 10\%$)
+- **Turun**: Jika $Q_{\text{akhir}} < 0{,}9 \times Q_{\text{awal}}$ (penurunan $> 10\%$)
+- **Stabil**: Selain kedua kondisi di atas
 
 **Implementasi**:
 ```php
 $halfCount = floor($sales->count() / 2);
 if ($halfCount > 0) {
-    $firstHalfQty = $sales->take($halfCount)->sum('qty_sold');
+    $firstHalfQty  = $sales->take($halfCount)->sum('qty_sold');
     $secondHalfQty = $sales->skip($halfCount)->sum('qty_sold');
 
     if ($secondHalfQty > $firstHalfQty * 1.1) {
@@ -759,7 +824,7 @@ IF Current = Dog:
 **Implementasi** (Simplified):
 ```php
 $futurePrediction = '';
-$confidence = 0;
+$confidence       = 0;
 
 if ($currentCategory === 'Star') {
     if ($trend === 'turun') {
@@ -775,7 +840,7 @@ if ($currentCategory === 'Star') {
 
 return [
     'future_prediction' => $futurePrediction,
-    'confidence' => $confidence
+    'confidence'        => $confidence,
 ];
 ```
 
@@ -789,45 +854,54 @@ Sistem melakukan cross-validation antara berbagai komponen untuk memastikan data
 
 #### A. Daily Sales Balance Validation
 
-Setiap hari harus memiliki **zero-sum balance** antara items dan header:
+Setiap record harian harus memenuhi **zero-sum balance** antara items dan header:
 
-$$\text{daily\_sales.total\_revenue} = \sum (\text{daily\_sale\_items.subtotal\_revenue})$$
+$$R_{\text{total}} = \sum_{i} R_{\text{sub},i}$$
 
-$$\text{daily\_sales.total\_hpp} = \sum (\text{daily\_sale\_items.subtotal\_hpp})$$
+$$HPP_{\text{total}} = \sum_{i} HPP_{\text{sub},i}$$
 
-$$\text{daily\_sales.gross\_profit} = \text{total\_revenue} - \text{total\_hpp}$$
+$$GP = R_{\text{total}} - HPP_{\text{total}}$$
 
 **Implementasi** (Post-transaction):
 ```php
 // PosController::store()
-$sale->recalculateTotals(); // Recalculate dan verify
+$sale->recalculateTotals();
 ```
 
-Jika ada discrepancy, ada bug dalam transaction processing.
+Jika terdapat discrepancy, hal tersebut mengindikasikan bug dalam transaction processing.
 
 #### B. Inventory Flow Validation
 
-**Raw Materials**:
-$$\text{Ingredient.current\_stock}_{\text{final}} = \text{initial} + \text{purchases} - \text{production\_usage} - \text{waste}$$
+**Bahan Baku (Raw Materials)**:
 
-**Finished Goods**:
-$$\text{MenuItem.current\_stock}_{\text{final}} = \text{initial} + \text{production} - \text{sales}$$
+$$S_{\text{bahan, akhir}} = S_{\text{awal}} + Q_{\text{beli}} - U_{\text{produksi}} - W_{\text{waste}}$$
+
+**Produk Jadi (Finished Goods)**:
+
+$$S_{\text{menu, akhir}} = S_{\text{awal}} + P_{\text{produksi}} - V_{\text{jual}}$$
+
+di mana:
+- $S$ = stok (`current_stock`)
+- $Q_{\text{beli}}$ = kuantitas pembelian bahan
+- $U_{\text{produksi}}$ = penggunaan bahan dalam produksi
+- $W_{\text{waste}}$ = kerugian bahan (dicatat via opname)
+- $P_{\text{produksi}}$ = kuantitas produksi menu
+- $V_{\text{jual}}$ = kuantitas penjualan menu
 
 **Logika di Code**:
-- Setiap pembelian ingredient → `current_stock` bertambah (InventoryController::storePurchase)
-- Setiap produksi → ingredient berkurang, MenuItem bertambah (InventoryController::storeProduction)
-- Setiap penjualan → MenuItem berkurang (PosController::store)
+- Setiap pembelian ingredient → `current_stock` bertambah (`InventoryController::storePurchase`)
+- Setiap produksi → ingredient berkurang, MenuItem bertambah (`InventoryController::storeProduction`)
+- Setiap penjualan → MenuItem berkurang (`PosController::store`)
 - Setiap opname → adjust dengan mencatat waste sebagai Expense
 
 #### C. Cost Consistency Validation
 
-**HPP Propagation Check**:
-$$\text{Setiap MenuItem.hpp harus} = \text{Recipe.calculateHpp()}$$
+**HPP Propagation Check**: Setiap `MenuItem.hpp` harus selalu konsisten dengan hasil `Recipe::calculateHpp()`.
 
-Trigger: Setiap kali ada pembelian ingredient baru (InventoryController::storePurchase):
+Trigger — setiap kali ada pembelian ingredient baru (`InventoryController::storePurchase`):
 ```php
 foreach ($ingredient->recipeItems as $recipeItem) {
-    $recipeItem->recipe->menuItem?->syncHpp(); // Update menu HPP
+    $recipeItem->recipe->menuItem?->syncHpp();
 }
 ```
 
@@ -836,18 +910,22 @@ foreach ($ingredient->recipeItems as $recipeItem) {
 #### D. Financial Balance Validation
 
 **Daily P&L Validation**:
-$$\text{Gross Profit}_{\text{daily}} = \sum \text{daily\_sale\_items.contribution\_margin}$$
+
+$$GP_{\text{harian}} = \sum_{i} CM_i$$
 
 **Monthly Reconciliation**:
-$$\text{Net Profit}_{\text{monthly}} = \text{Gross Profit} - \text{Total Expenses}$$
 
-Dapat di-export via [app/Http/Controllers/ReportController.php](app/Http/Controllers/ReportController.php):
+$$NP_{\text{bulanan}} = GP_{\text{bulanan}} - E_{\text{total}}$$
+
+di mana $NP$ = net profit dan $E_{\text{total}}$ = total pengeluaran operasional.
+
+Dapat di-export via `app/Http/Controllers/ReportController.php`:
 ```php
-$totalRevenue = $sales->sum('total_revenue');
-$totalHpp = $sales->sum('total_hpp');
-$grossProfit = $sales->sum('gross_profit');
+$totalRevenue  = $sales->sum('total_revenue');
+$totalHpp      = $sales->sum('total_hpp');
+$grossProfit   = $sales->sum('gross_profit');
 $totalExpenses = $expenses->sum('amount');
-$netProfit = $grossProfit - $totalExpenses;
+$netProfit     = $grossProfit - $totalExpenses;
 ```
 
 ---
@@ -860,14 +938,13 @@ Hasil analisis BI dievaluasi terhadap **kriteria keputusan berbasis domain UMKM 
 
 | KPI | Target Industri | Interpretasi |
 |-----|-----------------|--------------|
-| **Food Cost %** | 25-35% | Jika > 40%, cost structure bermasalah; jika < 20%, harga mungkin terlalu tinggi |
-| **Gross Profit Margin** | 40-60% | Healthy range untuk retail F&B |
-| **Inventory Turnover** | 15-30 hari | Optimal untuk perishable goods |
-| **Menu Item Count** | 10-20 items | Too many = inventory complex; too few = limited offering |
+| **Food Cost %** | 25–35% | Jika $> 40\%$: cost structure bermasalah; jika $< 20\%$: harga mungkin terlalu tinggi |
+| **Gross Profit Margin** | 40–60% | Rentang sehat untuk retail F&B |
+| **Inventory Turnover** | 15–30 hari | Optimal untuk perishable goods |
+| **Menu Item Count** | 10–20 items | Terlalu banyak = inventory kompleks; terlalu sedikit = pilihan terbatas |
 
-**Evaluasi Dashboard** (DashboardController::index):
+**Evaluasi Dashboard** (`DashboardController::index`):
 ```php
-// Food Cost % dievaluasi vs target 30%
 $kpi['fc_percent'] = round(($totalHpp / $totalRev) * 100, 2);
 // Jika fc_percent > 35%, flag warning untuk UMKM owner
 ```
@@ -876,47 +953,46 @@ $kpi['fc_percent'] = round(($totalHpp / $totalRev) * 100, 2);
 
 Hasil klasifikasi divalidasi melalui **business logic reasonableness**:
 
-1. **Star Items**: Perlu 2-3 items sebagai core revenue driver
-   - Jika tidak ada Star → menu structure perlu review
-   - Jika semua Star → data masih immature atau pricing perlu penyesuaian
+1. **Star Items**: Diharapkan 2–3 item sebagai core revenue driver.
+   - Tidak ada Star → struktur menu perlu review.
+   - Semua Star → data belum matang atau pricing perlu penyesuaian.
 
-2. **Plowhorse Items**: Diharapkan 3-5 items sebagai volume anchor
-   - Terlalu banyak Plowhorse → low differentiation
-   - Terlalu sedikit → profit margin terancam
+2. **Plowhorse Items**: Diharapkan 3–5 item sebagai volume anchor.
+   - Terlalu banyak Plowhorse → diferensiasi rendah.
+   - Terlalu sedikit → profit margin terancam.
 
-3. **Puzzle Items**: High-margin niche products (expected 1-3 items)
-   - Perlu aggressive marketing untuk convert ke Star
-   - Jika bertahan > 3 bulan → evaluasi market fit
+3. **Puzzle Items**: High-margin niche products (diharapkan 1–3 item).
+   - Perlu aggressive marketing untuk convert ke Star.
+   - Jika bertahan $> 3$ bulan → evaluasi market fit.
 
-4. **Dog Items**: Dead stock yang perlu dieliminasi
-   - Action item: hapus dari menu atau rebrand
-   - Track opname waste untuk Dog items
+4. **Dog Items**: Dead stock yang perlu dieliminasi.
+   - Action item: hapus dari menu atau rebrand.
+   - Track opname waste untuk Dog items.
 
-#### C. Prediksi Penjualan Accuracy Evaluation
+#### C. Prediksi Penjualan: Accuracy Evaluation
 
-Linear regression predictions dievaluasi dengan **rolling accuracy**:
+Prediksi linear regression dievaluasi dengan **Mean Absolute Percentage Error (MAPE)**:
 
-1. **In-Sample Fit**: Model ditrain pada hari 1 - N, diprediksi hari N+1, dibanding actual hari N+1
-2. **Out-of-Sample**: Setelah akumulasi 30+ hari, akurasi dihitung dengan MAPE (Mean Absolute Percentage Error)
+$$MAPE = \frac{1}{m} \sum_{i=1}^{m} \left| \frac{\hat{y}_i - y_i}{y_i} \right| \times 100\%$$
 
-$$\text{MAPE} = \frac{1}{m} \sum_{i=1}^{m} \left| \frac{\hat{y}_i - y_i}{y_i} \right| \times 100\%$$
+di mana $m$ = jumlah hari evaluasi, $\hat{y}_i$ = nilai prediksi, dan $y_i$ = nilai aktual.
 
 **Guideline**:
-- **MAPE < 10%**: Excellent (dapat digunakan untuk inventory planning)
-- **MAPE 10-20%**: Good (gunakan dengan caution factor 1.2)
-- **MAPE > 20%**: Fair (primarily untuk trend indication, bukan quantity planning)
+- $MAPE < 10\%$: Excellent — dapat digunakan untuk inventory planning
+- $10\% \leq MAPE \leq 20\%$: Good — gunakan dengan caution factor 1,2
+- $MAPE > 20\%$: Fair — terutama untuk indikasi tren, bukan quantity planning
 
 #### D. Data Quality Assessment
 
-Confidence Score digunakan sebagai filter untuk presentation hasil analisis:
+Confidence Score digunakan sebagai filter untuk presentasi hasil analisis:
 
 ```php
 if ($overall >= 70) {
-    $presentation = "RECOMMENDED"; // Display dengan confidence
+    $presentation = "RECOMMENDED";     // Tampilkan dengan confidence
 } elseif ($overall >= 40) {
-    $presentation = "INDICATIVE ONLY"; // Display dengan caveat
+    $presentation = "INDICATIVE ONLY"; // Tampilkan dengan caveat
 } else {
-    $presentation = "LEARNING MODE"; // Display dengan disclaimer
+    $presentation = "LEARNING MODE";   // Tampilkan dengan disclaimer
 }
 ```
 
@@ -927,22 +1003,22 @@ if ($overall >= 70) {
 Sistem mencatat metadata untuk setiap analisis guna memastikan reproducibility:
 
 #### A. Data Snapshot
-Setiap periode analisis (e.g., SPK Report) mencatat:
+Setiap periode analisis (contoh: SPK Report) mencatat:
 - `startDate`, `endDate` (filter period)
-- `totalQtyAll`, `averageCM`, `averageMM` (benchmark metrics)
+- $Q_{\text{total}}$, $\overline{CM}$, $\overline{MM}$ (benchmark metrics)
 - Generated timestamp
 
 #### B. Source Data Attribution
 Setiap KPI mereferensi source table dan kolom:
-- Revenue ← daily_sales.total_revenue (SUM dari daily_sale_items.subtotal_revenue)
-- HPP ← daily_sales.total_hpp (SUM dari daily_sale_items.subtotal_hpp)
-- Margin ← daily_sale_items.contribution_margin
+- Revenue ← `daily_sales.total_revenue` (SUM dari `daily_sale_items.subtotal_revenue`)
+- HPP ← `daily_sales.total_hpp` (SUM dari `daily_sale_items.subtotal_hpp`)
+- Margin ← `daily_sale_items.contribution_margin`
 
 #### C. Model Version
 Linear Regression model mencatat:
-- Jumlah data point (n)
-- Slope (b) dan intercept (a)
-- Confidence interval
+- Jumlah data point ($n$)
+- Slope ($b$) dan intercept ($a$)
+- Confidence Score ($\text{Score}$)
 
 ---
 
@@ -951,44 +1027,44 @@ Linear Regression model mencatat:
 Hasil analisis dikomunikasikan melalui beberapa format:
 
 #### A. Dashboard Interaktif
-[DashboardController::index](app/Http/Controllers/DashboardController.php) → view: `dashboard.blade.php`
-- KPI cards (Revenue, Profit, FC%)
+`DashboardController::index` → view: `dashboard.blade.php`
+- KPI cards (Revenue, Profit, $FC\%$)
 - Period selector (today, this_week, this_month)
 - Real-time update (non-batch)
 
 #### B. Strategic Report (SPK)
-[SpkController::index](app/Http/Controllers/SpkController.php) → view: `spk.index`
+`SpkController::index` → view: `spk.index`
 - BCG Matrix visualization
 - Per-menu recommendation
-- Sortir berdasarkan priority (Star → Dog)
+- Diurutkan berdasarkan priority (Star → Dog)
 
 #### C. BI Analytics Hub
-[BiHubController](app/Http/Controllers/BiHubController.php) → multiple views:
+`BiHubController` → multiple views:
 - Sales Trend (line chart, time series)
 - Menu Ranking (bar chart, top 10 menus)
 - Waste Analysis (stacked bar: sales vs waste)
 
 #### D. PDF Export
-[ReportController::exportFinance](app/Http/Controllers/ReportController.php)
+`ReportController::exportFinance`
 - Financial P&L statement
 - Inventory asset valuation
 - Formal audit trail untuk compliance
 
 ---
 
-## Kesimpulan (IV.5)
+## IV.5 Kesimpulan
 
 Sistem Aplikasi Produksi Naila mengimplementasikan **Business Intelligence Pipeline komprehensif** dengan paradigma CRISP-DM:
 
-1. **Data Understanding**: 6 fact tables (`daily_sales`, `daily_sale_items`, `purchases`, `expenses`, `production_logs`, `ingredients`) + 4 primary dimensions (Time, Product, Channel, Organization)
+1. **Data Understanding**: 6 fact tables (`daily_sales`, `daily_sale_items`, `purchases`, `expenses`, `production_logs`, `ingredients`) dengan 4 primary dimensions (Time, Product, Channel, Organization).
 
-2. **Data Preparation**: 
-   - Extract: Real-time operational input via Controllers
-   - Transform: Automated calculations (HPP, Margin, Moving Average) pada insertion
-   - Load: Aggregated data di header tables (`daily_sales`, `purchases`) dan analytics views
+2. **Data Preparation**:
+   - *Extract*: Real-time operational input via Controllers
+   - *Transform*: Automated calculations (HPP, Margin, Moving Average) pada insertion
+   - *Load*: Aggregated data di header tables (`daily_sales`, `purchases`) dan analytics views
 
 3. **Data Modelling**:
-   - BCG Classification: 4-cell matrix (Star, Plowhorse, Puzzle, Dog) dengan heuristik MM% & CM
+   - BCG Classification: 4-cell matrix (Star, Plowhorse, Puzzle, Dog) dengan heuristik $MM\%$ dan $CM$
    - Prediction: Linear Regression untuk 3-day forecast penjualan per menu
 
 4. **Evaluation**:
@@ -996,5 +1072,4 @@ Sistem Aplikasi Produksi Naila mengimplementasikan **Business Intelligence Pipel
    - Business logic validation: KPI benchmarking vs industry standards
    - Confidence scoring: Data maturity assessment sebelum actionability
 
-Sistem dirancang untuk UMKM dengan **low-code operational complexity** namun **high analytical capability**, memungkinkan data-driven decision making tanpa memerlukan dedicated data scientist.
-
+Sistem dirancang untuk UMKM dengan **low-code operational complexity** namun **high analytical capability**, memungkinkan pengambilan keputusan berbasis data tanpa memerlukan dedicated data scientist.
