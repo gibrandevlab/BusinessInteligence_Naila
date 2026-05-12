@@ -93,11 +93,11 @@ Atribut financial yang menjadi Key Performance Indicator (KPI) utama (dalam back
 |-----|---------|--------|--------------|
 | **Revenue** | `SUM(daily_sale_items.subtotal_revenue)` | daily sales → daily sale items | Total pendapatan penjualan |
 | **HPP (COGS)** | `SUM(daily_sale_items.subtotal_hpp)` | daily sales → daily sale items | Total biaya produksi produk terjual |
-| **Gross Profit** | Revenue \- HPP | daily sales.gross profit | Laba kotor sebelum biaya operasional |
+| **Gross Profit** | Revenue - HPP | daily sales.gross profit | Laba kotor sebelum biaya operasional |
 | **Contribution Margin** | `daily_sale_items.contribution_margin` per item | daily sale items | Kontribusi keuntungan per produk |
 | **Food Cost %** | (HPP / Revenue) × 100% | DashboardController formula | Persentase biaya bahan vs penjualan |
 | **Pengeluaran Operasional** | `SUM(expenses.amount)` | expenses | Biaya non-COGS (gaji, listrik, dll) |
-| **Net Profit** | Gross Profit \- Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
+| **Net Profit** | Gross Profit - Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
 
 ---
 
@@ -451,7 +451,7 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 **Fact Table: daily_sale_items** (granularity: per product per day per channel)
 | Dimensi | Tabel Referensi | Atribut |
 |---------|-----------------|---------|
-| Time    | Implicit        | sale_date (dari daily_sales) |
+| Time    | Implicit        | `sale_date` (dari `daily_sales`) |
 | Product | menu_items      | menu_item_id, name, category, recipe_id |
 | Channel | Implicit        | buyer_type (Eceran/Reseller/Agen) |
 | Organization | users      | user_id (kasir yang menginput) |
@@ -474,7 +474,7 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 #### Dimension Tables
 
 **Dimension: Time** (Calendar hierarchy)
-- Source: Daily_sales.sale_date, purchase.purchase_date, production_logs.production_date
+- Source: `daily_sales.sale_date`, `purchase.purchase_date`, `production_logs.production_date`
 - Granularity: Daily
 - Hierarchy: Day → Week → Month → Year
 
@@ -980,12 +980,12 @@ Hasil analisis dikomunikasikan melalui beberapa format:
 
 Sistem Aplikasi Produksi Naila mengimplementasikan **Business Intelligence Pipeline komprehensif** dengan paradigma CRISP-DM:
 
-1. **Data Understanding**: 6 fact tables (daily_sales, daily_sale_items, purchases, expenses, production_logs, ingredients) + 4 primary dimensions (Time, Product, Channel, Organization)
+1. **Data Understanding**: 6 fact tables (`daily_sales`, `daily_sale_items`, `purchases`, `expenses`, `production_logs`, `ingredients`) + 4 primary dimensions (Time, Product, Channel, Organization)
 
 2. **Data Preparation**: 
    - Extract: Real-time operational input via Controllers
    - Transform: Automated calculations (HPP, Margin, Moving Average) pada insertion
-   - Load: Aggregated data di header tables (daily_sales, purchases) dan analytics views
+   - Load: Aggregated data di header tables (`daily_sales`, `purchases`) dan analytics views
 
 3. **Data Modelling**:
    - BCG Classification: 4-cell matrix (Star, Plowhorse, Puzzle, Dog) dengan heuristik MM% & CM
