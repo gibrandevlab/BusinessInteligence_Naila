@@ -87,17 +87,17 @@ Berdasarkan struktur tabel di atas, sistem BI dibangun atas empat dimensi utama:
 | **Channel** | Segmentasi customer berdasarkan buyer type | `daily_sale_items.buyer_type` | Eceran, Reseller, Agen |
 | **Organization** | User/operator yang melakukan transaksi | `daily_sales.user_id`, `purchases.user_id` | Kasir, Inventory Manager, Admin |
 
-Atribut financial yang menjadi Key Performance Indicator (KPI) utama:
+Atribut financial yang menjadi Key Performance Indicator (KPI) utama (dalam backticks untuk kode database):
 
 | KPI | Formula | Sumber | Interpretasi |
 |-----|---------|--------|--------------|
-| **Revenue** | `SUM(daily_sale_items.subtotal_revenue)` | daily_sales → daily_sale_items | Total pendapatan penjualan |
-| **HPP (COGS)** | `SUM(daily_sale_items.subtotal_hpp)` | daily_sales → daily_sale_items | Total biaya produksi produk terjual |
-| **Gross Profit** | Revenue - HPP | daily_sales.gross_profit | Laba kotor sebelum biaya operasional |
-| **Contribution Margin** | `daily_sale_items.contribution_margin` per item | daily_sale_items | Kontribusi keuntungan per produk |
+| **Revenue** | `SUM(daily_sale_items.subtotal_revenue)` | daily sales → daily sale items | Total pendapatan penjualan |
+| **HPP (COGS)** | `SUM(daily_sale_items.subtotal_hpp)` | daily sales → daily sale items | Total biaya produksi produk terjual |
+| **Gross Profit** | Revenue \- HPP | daily sales.gross profit | Laba kotor sebelum biaya operasional |
+| **Contribution Margin** | `daily_sale_items.contribution_margin` per item | daily sale items | Kontribusi keuntungan per produk |
 | **Food Cost %** | (HPP / Revenue) × 100% | DashboardController formula | Persentase biaya bahan vs penjualan |
 | **Pengeluaran Operasional** | `SUM(expenses.amount)` | expenses | Biaya non-COGS (gaji, listrik, dll) |
-| **Net Profit** | Gross Profit - Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
+| **Net Profit** | Gross Profit \- Pengeluaran Operasional | DashboardController formula | Laba bersih bisnis |
 
 ---
 
