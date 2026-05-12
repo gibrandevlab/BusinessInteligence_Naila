@@ -116,10 +116,10 @@ Proses ekstraksi data penjualan dimulai ketika kasir menginput transaksi:
 1. Input User: Cart JSON (array of {id, qty})
 2. Validasi: cart tidak boleh kosong
 3. Ekstraksi Data dari Form:
-   - buyer_type (Eceran/Reseller/Agen)
-   - payment_method 
-   - cart items (menu_item_id, quantity)
-   - current timestamp (sale_date = Carbon::now())
+   - `buyer_type` (Eceran/Reseller/Agen)
+   - `payment_method`
+   - cart items (`menu_item_id`, `quantity`)
+   - current timestamp (`sale_date` = Carbon::now())
 4. Load Related Data:
    - MenuItem::with('recipe.items.ingredient') — fetch HPP dependencies
 ```
@@ -138,7 +138,7 @@ foreach ($cart as $item) {
 ```
 
 **Data Extraction Points**:
-1. Per-item selling price diambil dari `MenuItem` berdasarkan buyer_type (price_eceran / price_reseller / price_agen)
+1. Per-item selling price diambil dari `MenuItem` berdasarkan `buyer_type` (`price_eceran` / `price_reseller` / `price_agen`)
 2. HPP per-item diambil dari `MenuItem::$hpp` (snapshot saat transaksi)
 3. Stok (raw & finished goods) di-extract dari `MenuItem::$current_stock` dan `Ingredient::$current_stock`
 
@@ -146,18 +146,18 @@ foreach ($cart as $item) {
 **File**: [app/Http/Controllers/InventoryController.php](app/Http/Controllers/InventoryController.php)
 
 ```
-1. Input User: ingredient_id, supplier_id, quantity, total_price
+1. Input User: `ingredient_id`, `supplier_id`, `quantity`, `total_price`
 2. Validasi: quantity > 0, ingredient exists
 3. Ekstraksi & Kalkulasi:
-   - Old Total Value = current_stock × cost_per_unit
+   - Old Total Value = `current_stock` × `cost_per_unit`
    - Beli Quantity & Total Price dari form user
 ```
 
 #### C. Extract dari Produksi (InventoryController::storeProduction)
 ```
-1. Input User: menu_id, quantity
+1. Input User: `menu_id`, `quantity`
 2. Extract menu dengan relasi: with('recipe.items.ingredient')
-3. Load: production_capacity (derived attribute untuk validasi stok cukup)
+3. Load: `production_capacity` (derived attribute untuk validasi stok cukup)
 4. Catat ke ProductionLog
 ```
 
@@ -479,12 +479,12 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 - Hierarchy: Day → Week → Month → Year
 
 **Dimension: Product (Menu)** 
-- Table: menu_items, recipes, recipe_items
+- Table: `menu_items`, `recipes`, `recipe_items`
 - Attributes: name, category, hpp, price_eceran, price_reseller, price_agen
 - Hierarchy: Category → Menu Item → Recipe
 
 **Dimension: Channel**
-- Source: daily_sale_items.buyer_type
+- Source: `daily_sale_items.buyer_type`
 - Values: {Eceran, Reseller, Agen}
 
 **Dimension: Ingredient (for Supply Chain Analysis)**
