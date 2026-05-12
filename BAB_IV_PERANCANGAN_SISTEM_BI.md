@@ -492,7 +492,9 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 
 #### Fact Tables
 
-**Fact Table: `daily_sale_items`** (granularity: per produk per hari per channel)
+**Fact Table: `daily_sale_items`** (granularity: per line item transaksi penjualan)
+
+*Catatan: Setiap transaksi penjualan dapat memiliki multiple records `daily_sale_items` — satu record per produk yang terjual. Tidak ada guarantee unique per hari per channel, karena dalam satu hari bisa ada multiple transaksi untuk produk yang sama dengan channel yang sama.*
 
 | Dimensi | Tabel Referensi | Atribut |
 |---------|-----------------|---------|
@@ -500,11 +502,12 @@ Meskipun aplikasi menggunakan **operational OLTP schema**, sistem BI mengakses d
 | Product | menu_items | `menu_item_id`, `name`, `category`, `recipe_id` |
 | Channel | Implicit | `buyer_type` (Eceran/Reseller/Agen) |
 | Organization | users | `user_id` (kasir yang menginput) |
+| Transaction | daily_sales | `daily_sale_id` (FK ke transaksi penjualan) |
 
 **Measures** (numeric facts):
-- `qty_sold` (kuantitas)
-- `subtotal_revenue` (pendapatan)
-- `subtotal_hpp` (COGS)
+- `qty_sold` (kuantitas dalam satu line item transaksi)
+- `subtotal_revenue` (pendapatan dari line item ini)
+- `subtotal_hpp` (COGS dari line item ini)
 - `contribution_margin` (laba di level line-item)
 
 **Fact Table: `production_logs`** (granularity: per produk per hari produksi)
@@ -854,13 +857,15 @@ Sistem melakukan cross-validation antara berbagai komponen untuk memastikan data
 
 #### A. Daily Sales Balance Validation
 
-Setiap record harian harus memenuhi **zero-sum balance** antara items dan header:
+Setiap record transaksi penjualan (`daily_sales` header) harus memenuhi **zero-sum balance** antara semua line items (`daily_sale_items`) dan totals di header:
 
 $$R_{\text{total}} = \sum_{i} R_{\text{sub},i}$$
 
 $$HPP_{\text{total}} = \sum_{i} HPP_{\text{sub},i}$$
 
 $$GP = R_{\text{total}} - HPP_{\text{total}}$$
+
+di mana indeks $i$ merentang seluruh `daily_sale_items` dalam satu record `daily_sales`.
 
 **Implementasi** (Post-transaction):
 ```php
