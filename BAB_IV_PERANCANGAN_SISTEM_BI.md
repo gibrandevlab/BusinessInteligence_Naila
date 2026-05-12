@@ -12,8 +12,8 @@ Tabel penjualan mencakup dua level agregasi:
 **Level Header: `daily_sales` (Migration: 2026_05_01_063330_b_create_daily_sales_table.php)**
 - **Atribut utama**: `id`, `user_id`, `sale_date`, `total_revenue`, `total_hpp`, `gross_profit`, `payment_method`, `notes`
 - **Tipe data**: Decimal(12,2) untuk financial metrics, Date untuk temporal dimension
-- **Kardinalitas**: Satu record per hari (constraint: unique sale_date)
-- **Referensi**: Foreign key ke tabel `users` (who, user_id), pencatatan transaksi level hari
+- **Kardinalitas**: Satu atau lebih record per hari (constraint unique `sale_date` dihapus di migration 2026_05_01_080422)
+- **Referensi**: Foreign key ke tabel `users` (who, user_id), pencatatan transaksi level user per hari
 
 **Level Detail: `daily_sale_items` (Migration: 2026_05_01_063331_a_create_daily_sale_items_table.php)**
 - **Atribut utama**: `id`, `daily_sale_id`, `menu_item_id`, `qty_sold`, `selling_price`, `hpp_per_item`, `subtotal_revenue`, `subtotal_hpp`, `contribution_margin`
@@ -505,9 +505,9 @@ Sistem menggunakan dua dimensi BCG untuk klasifikasi menu:
 **Dimensi 1: Menu Mix (Popularitas/Market Share) — MM%**
 $$\text{MM\%} = \frac{\text{qty\_sold\_menu}}{\text{total\_qty\_all}} \times 100\%$$
 
-Threshold:
-$$\text{Average MM} = \frac{1}{N} \times 0.7 \times 100\% = \frac{70}{N}\%$$
-dimana N = jumlah menu item yang terjual.
+Threshold (simple average dari semua menu):
+$$\text{Average MM} = \frac{100\%}{N}$$
+dimana N = jumlah menu item yang terjual (yang memiliki qty > 0).
 
 Interpretasi:
 - **MM ≥ Average MM**: High Market Share ("Market Leader")
