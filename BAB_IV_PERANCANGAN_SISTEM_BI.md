@@ -557,11 +557,25 @@ $$MM\%_j = \frac{Q_j}{Q_{\text{total}}} \times 100\%$$
 
 di mana $Q_j$ = kuantitas terjual menu ke-$j$, dan $Q_{\text{total}}$ = total kuantitas seluruh menu.
 
-Threshold (simple average dari semua menu):
+Threshold (adjusted average untuk realistic classification):
 
-$$\overline{MM} = \frac{100\%}{N}$$
+$$\overline{MM} = \frac{100\%}{N} \times 0.7$$
 
 di mana $N$ = jumlah menu item yang terjual ($Q_j > 0$).
+
+**Penjelasan Factor 0.7:**
+Factor 0.7 adalah **dampening coefficient** (koefisien peredam) yang digunakan untuk menyesuaikan threshold agar lebih realistis dalam konteks UMKM dengan menu terbatas. 
+
+- **Tanpa factor**: Threshold = 100%/$N$ (equal distribution ideal)
+- **Dengan factor 0.7**: Threshold = (100%/$N$) × 0.7 = 70% dari equal distribution
+
+*Rationale:* Pada UMKM pangan dengan item menu terbatas (3-5 item), menggunakan threshold equal distribution seringkali terlalu ketat dan mengakibatkan hampir semua item terklasifikasi sebagai "Dog" atau "Puzzle". Factor 0.7 menurunkan threshold agar suatu item yang cukup populer tetap bisa diakui sebagai "Star" atau "Plowhorse", sesuai dengan dinamika penjualan nyata.
+
+**Contoh perhitungan:**
+- Jika ada 5 menu item yang terjual:
+  - Dengan factor 0.7: $\overline{MM} = (100\% / 5) \times 0.7 = 20\% \times 0.7 = 14\%$
+  - Tanpa factor: $\overline{MM} = 100\% / 5 = 20\%$
+  - Menu dengan $MM\% = 15\%$ akan termasuk "High Market Share" dengan factor 0.7, namun "Low Market Share" tanpa factor
 
 Interpretasi:
 - $MM\%_j \geq \overline{MM}$: *High Market Share* ("Market Leader")
@@ -592,6 +606,14 @@ Kombinasi kedua dimensi menghasilkan empat kategori BCG:
 
 **Kode Implementasi** (`SpkController::index`):
 ```php
+// Kalkulasi rata-rata CM dan MM dengan dampening coefficient
+$averageCM = $totalQtyAll > 0 ? ($totalMarginAll / $totalQtyAll) : 0;
+
+// Threshold Menu Mix menggunakan factor 0.7 untuk adjustment yang lebih realistis
+// Formula: (1/N) * 0.7 * 100, bukan hanya (1/N) * 100
+$averageMM = $numberOfMenus > 0 ? (1 / $numberOfMenus) * 0.7 * 100 : 0;
+
+// Klasifikasi BCG untuk setiap menu
 if ($mmPercent >= $averageMM && $cmPerItem >= $averageCM) {
     $category = 'Star';
     $action = 'Pertahankan kualitas & jadikan signature dish.';
@@ -1010,8 +1032,11 @@ Sistem mencatat metadata untuk setiap analisis guna memastikan reproducibility:
 #### A. Data Snapshot
 Setiap periode analisis (contoh: SPK Report) mencatat:
 - `startDate`, `endDate` (filter period)
-- $Q_{\text{total}}$, $\overline{CM}$, $\overline{MM}$ (benchmark metrics)
+- $Q_{\text{total}}$, $\overline{CM}$, $\overline{MM}$ (benchmark metrics dengan $\overline{MM} = \frac{100\%}{N} \times 0.7$)
 - Generated timestamp
+- Jumlah menu item ($N$) yang dianalisis
+
+**Catatan**: Nilai $\overline{MM}$ yang dicatat sudah termasuk dampening coefficient 0.7, untuk memastikan hasil klasifikasi realistis dalam konteks UMKM dengan menu terbatas.
 
 #### B. Source Data Attribution
 Setiap KPI mereferensi source table dan kolom:
