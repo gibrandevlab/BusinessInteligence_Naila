@@ -24,7 +24,7 @@ Route::middleware('auth')->group(function () {
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
-    // ── SPK (Menu Engineering) ────────────────────────────────────────────
+    // ── Sistem Penunjang Keputusan (Decision Support System) ─────────────────
     Route::get('/spk', [SpkController::class, 'index'])->name('spk.index');
     Route::get('/spk/export-pdf', [SpkController::class, 'exportPdf'])->name('spk.export');
 

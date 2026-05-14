@@ -1030,7 +1030,7 @@ if ($overall >= 70) {
 Sistem mencatat metadata untuk setiap analisis guna memastikan reproducibility:
 
 #### A. Data Snapshot
-Setiap periode analisis (contoh: SPK Report) mencatat:
+Setiap periode analisis (contoh: Laporan SPK/Decision Support Report) mencatat:
 - `startDate`, `endDate` (filter period)
 - $Q_{\text{total}}$, $\overline{CM}$, $\overline{MM}$ (benchmark metrics dengan $\overline{MM} = \frac{100\%}{N} \times 0.7$)
 - Generated timestamp
@@ -1062,10 +1062,10 @@ Hasil analisis dikomunikasikan melalui beberapa format:
 - Period selector (today, this_week, this_month)
 - Real-time update (non-batch)
 
-#### B. Strategic Report (SPK)
+#### B. Sistem Penunjang Keputusan (Decision Support System - SPK)
 `SpkController::index` → view: `spk.index`
-- BCG Matrix visualization
-- Per-menu recommendation
+- BCG Matrix visualization untuk analisis Menu Engineering
+- Per-menu recommendation berdasarkan klasifikasi
 - Diurutkan berdasarkan priority (Star → Dog)
 
 #### C. BI Analytics Hub
